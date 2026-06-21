@@ -1,0 +1,15 @@
+.env
+bot_data.json
+commands_data.json
+server_url*.txt
+*.log
+__pycache__/
+cloudflared.exe
+deploy/
+*.vbs
+*.ps1
+*.bat
+*.xml
+watchdog.ps1
+replit/
+koyeb/

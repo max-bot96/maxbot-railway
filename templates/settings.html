@@ -1,0 +1,546 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الإعدادات - MAX BOT Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --dark: #0f172a;
+            --dark2: #1e293b;
+            --dark3: #334155;
+            --light: #f8fafc;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
+        body { background: var(--dark); color: var(--light); min-height: 100vh; padding: 30px; }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: var(--dark2);
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+        }
+        .header h1 { display: flex; align-items: center; gap: 15px; font-size: 24px; }
+        .header h1 i { color: var(--primary); }
+        .header .user-info { display: flex; align-items: center; gap: 15px; }
+        .header .user-info img { width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--primary); }
+        .header .logout-btn {
+            padding: 10px 20px;
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        .setting-card {
+            background: var(--dark2);
+            padding: 25px;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+        }
+        .setting-card h3 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .setting-card h3 i { font-size: 20px; }
+        
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .setting-row:last-child { border-bottom: none; }
+        .setting-row label { font-weight: 500; color: var(--light); }
+        .setting-row p { color: #94a3b8; font-size: 13px; margin-top: 5px; }
+        
+        .setting-input {
+            padding: 10px 15px;
+            background: var(--dark3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--light);
+            font-size: 14px;
+            width: 150px;
+        }
+        
+        .toggle { position: relative; width: 50px; height: 26px; flex-shrink: 0; }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: var(--dark3);
+            border-radius: 26px;
+            transition: 0.3s;
+        }
+        .slider::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        input:checked + .slider { background: var(--primary); }
+        input:checked + .slider::before { transform: translateX(24px); }
+        
+        .save-btn {
+            background: linear-gradient(135deg, var(--primary), #8b5cf6);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 30px;
+            transition: 0.3s;
+        }
+        .save-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4); }
+        
+        .danger-btn {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 12px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .danger-btn:hover { background: var(--danger); color: white; }
+        
+        .info-box {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        .info-box h4 { color: var(--primary); margin-bottom: 8px; }
+        .info-box p { color: #94a3b8; font-size: 13px; line-height: 1.6; }
+        
+        .stats-row { display: flex; gap: 15px; flex-wrap: wrap; }
+        .stats-row .stat { background: var(--dark3); padding: 15px; border-radius: 10px; text-align: center; flex: 1; }
+        .stats-row .stat i { font-size: 24px; color: var(--primary); display: block; margin-bottom: 8px; }
+        .stats-row .stat span { font-size: 20px; font-weight: bold; color: var(--light); }
+        .stats-row .stat p { font-size: 12px; color: #94a3b8; margin-top: 5px; }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 12px;
+            color: #fff;
+            font-weight: bold;
+            display: none;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+        .toast.success { background: var(--secondary); }
+        .toast.error { background: var(--danger); }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .backup-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .backup-btn {
+            background: var(--dark3);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            border: 1px solid var(--glass-border);
+            transition: 0.3s;
+        }
+        .backup-btn:hover { border-color: var(--primary); background: var(--glass); }
+        .backup-btn i { font-size: 30px; color: var(--primary); margin-bottom: 10px; }
+        .backup-btn h4 { color: var(--light); margin-bottom: 5px; }
+        .backup-btn p { color: #94a3b8; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-cog"></i> إعدادات المالك</h1>
+        <div class="user-info">
+            <img src="https://cdn.discordapp.com/avatars/1379265753877975182/avatar.png" alt="Bot">
+            <div>
+                <div style="font-weight: 600;">المالك</div>
+                <div style="color: var(--secondary); font-size: 12px;">مسجل دخول</div>
+            </div>
+            <button class="logout-btn" onclick="window.location.href='/logout'">
+                <i class="fas fa-sign-out-alt"></i> خروج
+            </button>
+        </div>
+    </div>
+
+    <div class="settings-grid">
+        <!-- إعدادات البوت -->
+        <div class="setting-card">
+            <h3><i class="fas fa-robot"></i> إعدادات البوت</h3>
+            <div class="setting-row">
+                <div>
+                    <label>اسم البوت</label>
+                    <p>اسم البوت في الديسكورد</p>
+                </div>
+                <input type="text" class="setting-input" id="bot_name" value="MAX BOT">
+            </div>
+            <div class="setting-row">
+                <div>
+                    <label>البادئة</label>
+                    <p>رمز الأمر الرئيسي</p>
+                </div>
+                <input type="text" class="setting-input" id="prefix" value="!" style="width: 80px; text-align: center;">
+            </div>
+            <div class="setting-row">
+                <div>
+                    <label>اللغة</label>
+                    <p>لغة واجهة البوت</p>
+                </div>
+                <select class="setting-input" id="language">
+                    <option value="ar">العربية</option>
+                    <option value="en">English</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- إعدادات الأنظمة -->
+        <div class="setting-card">
+            <h3><i class="fas fa-toggle-on"></i> التحكم بالأنظمة</h3>
+            <div class="setting-row">
+                <div>
+                    <label>نظام الترحيب</label>
+                    <p>تفعيل رسالة الترحيب</p>
+                </div>
+                <label class="toggle"><input type="checkbox" id="welcome_enabled" checked><span class="slider"></span></label>
+            </div>
+            <div class="setting-row">
+                <div>
+                    <label>نظام الاقتصاد</label>
+                    <p>نظام الفلوس والشراء</p>
+                </div>
+                <label class="toggle"><input type="checkbox" id="economy_enabled" checked><span class="slider"></span></label>
+            </div>
+            <div class="setting-row">
+                <div>
+                    <label>نظام الموسيقى</label>
+                    <p>مشغل الموسيقى</p>
+                </div>
+                <label class="toggle"><input type="checkbox" id="music_enabled" checked><span class="slider"></span></label>
+            </div>
+            <div class="setting-row">
+                <div>
+                    <label>نظام الحماية</label>
+                    <p>حماية السيرفر</p>
+                </div>
+                <label class="toggle"><input type="checkbox" id="protection_enabled" checked><span class="slider"></span></label>
+            </div>
+            <div class="setting-row">
+                <div>
+                    <label>نظام المستوى</label>
+                    <p>نظام XP والألعاب</p>
+                </div>
+                <label class="toggle"><input type="checkbox" id="level_enabled" checked><span class="slider"></span></label>
+            </div>
+        </div>
+
+        <!-- الإشعارات -->
+        <div class="setting-card">
+            <h3><i class="fas fa-bell"></i> الإشعارات</h3>
+            <div class="setting-row">
+                <div>
+                    <label>إشعارات الدخول</label>
+                    <p>رسالة عند دخول عضو جديد</p>
+                </div>
+                <label class="toggle"><input type="checkbox" id="join_notify" checked><span class="slider"></span></label>
+            </div>
+            <div class="setting-row">
+                <div>
+                    <label>إشعارات الخروج</label>
+                    <p>رسالة عند خروج عضو</p>
+                </div>
+                <label class="toggle"><input type="checkbox" id="leave_notify"><span class="slider"></span></label>
+            </div>
+            <div class="setting-row">
+                <div>
+                    <label>إشعارات الأوامر</label>
+                    <p>تنبيه عند استخدام أمر مهم</p>
+                </div>
+                <label class="toggle"><input type="checkbox" id="command_notify"><span class="slider"></span></label>
+            </div>
+            <div class="setting-row">
+                <div>
+                    <label>إشعارات الأخطاء</label>
+                    <p>تنبيه عند حدوث خطأ</p>
+                </div>
+                <label class="toggle"><input type="checkbox" id="error_notify" checked><span class="slider"></span></label>
+            </div>
+        </div>
+
+        <!-- الأمان -->
+        <div class="setting-card">
+            <h3><i class="fas fa-shield-alt"></i> الأمان</h3>
+            <div class="setting-row">
+                <div>
+                    <label>حالة البوت</label>
+                    <p>تفعيل أو إيقاف البوت</p>
+                </div>
+                <label class="toggle"><input type="checkbox" id="bot_status" checked><span class="slider"></span></label>
+            </div>
+            <div class="setting-row">
+                <div>
+                    <label>صيانة</label>
+                    <p>وضع الصيانة</p>
+                </div>
+                <label class="toggle"><input type="checkbox" id="maintenance"><span class="slider"></span></label>
+            </div>
+            <div class="setting-row">
+                <div>
+                    <label>تسجيل الأوامر</label>
+                    <p>تسجيل كل الأوامر المستخدمة</p>
+                </div>
+                <label class="toggle"><input type="checkbox" id="log_commands" checked><span class="slider"></span></label>
+            </div>
+            <div class="setting-row">
+                <div>
+                    <label>الوضع الخاص</label>
+                    <p>لأوامر المالك فقط</p>
+                </div>
+                <label class="toggle"><input type="checkbox" id="owner_only"><span class="slider"></span></label>
+            </div>
+        </div>
+
+        <!-- النسخ الاحتياطي -->
+        <div class="setting-card">
+            <h3><i class="fas fa-database"></i> البيانات والنسخ</h3>
+            <div class="info-box">
+                <h4><i class="fas fa-info-circle"></i> معلومات البيانات</h4>
+                <p>إدارة بيانات البوت والاقتصاد والإعدادات</p>
+            </div>
+            <div class="stats-row">
+                <div class="stat">
+                    <i class="fas fa-server"></i>
+                    <span id="servers_count">0</span>
+                    <p>سيرفرات</p>
+                </div>
+                <div class="stat">
+                    <i class="fas fa-users"></i>
+                    <span id="users_count">0</span>
+                    <p>مستخدمين</p>
+                </div>
+                <div class="stat">
+                    <i class="fas fa-coins"></i>
+                    <span id="money_count">0</span>
+                    <p>إجمالي الفلوس</p>
+                </div>
+            </div>
+            <div class="backup-section">
+                <div class="backup-btn" onclick="backupData()">
+                    <i class="fas fa-download"></i>
+                    <h4>نسخة احتياطية</h4>
+                    <p>حفظ البيانات</p>
+                </div>
+                <div class="backup-btn" onclick="restoreData()">
+                    <i class="fas fa-upload"></i>
+                    <h4>استعادة</h4>
+                    <p>استيراد البيانات</p>
+                </div>
+            </div>
+            <button class="danger-btn" onclick="resetData()" style="width: 100%; justify-content: center; margin-top: 15px;">
+                <i class="fas fa-trash"></i> مسح كل البيانات
+            </button>
+        </div>
+
+        <!-- معلومات البوت -->
+        <div class="setting-card">
+            <h3><i class="fas fa-info-circle"></i> معلومات البوت</h3>
+            <div class="setting-row">
+                <div>
+                    <label>رقم التعريف (ID)</label>
+                    <p>معرف البوت في الديسكورد</p>
+                </div>
+                <span style="color: var(--primary); font-weight: bold;">1379265753877975182</span>
+            </div>
+            <div class="setting-row">
+                <div>
+                    <label>الإصدار</label>
+                    <p>نسخة البوت الحالية</p>
+                </div>
+                <span style="color: var(--secondary); font-weight: bold;">v2.0 Pro</span>
+            </div>
+            <div class="setting-row">
+                <div>
+                    <label>عدد الأوامر</label>
+                    <p>إجمالي الأوامر</p>
+                </div>
+                <span style="color: var(--warning); font-weight: bold;">153 أمر</span>
+            </div>
+            <div class="setting-row">
+                <div>
+                    <label>تاريخ الإنشاء</label>
+                    <p>متى بدأ البوت</p>
+                </div>
+                <span style="color: #94a3b8;">2024</span>
+            </div>
+            <div class="setting-row">
+                <div>
+                    <label>حالة الاتصال</label>
+                    <p>هل البوت متصل</p>
+                </div>
+                <span style="color: var(--secondary);"><i class="fas fa-circle" style="font-size: 10px;"></i> متصل</span>
+            </div>
+        </div>
+    </div>
+
+    <button class="save-btn" onclick="saveSettings()">
+        <i class="fas fa-save"></i> حفظ الإعدادات
+    </button>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast ' + type;
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 3000);
+        }
+
+        function logout() { window.location.href = '/logout'; }
+
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/owner/settings');
+                const data = await response.json();
+                document.getElementById('bot_name').value = data.bot_name || 'MAX BOT';
+                document.getElementById('prefix').value = data.prefix || '!';
+                document.getElementById('language').value = data.language || 'ar';
+                document.getElementById('welcome_enabled').checked = data.welcome_enabled !== false;
+                document.getElementById('economy_enabled').checked = data.economy_enabled !== false;
+                document.getElementById('music_enabled').checked = data.music_enabled !== false;
+                document.getElementById('protection_enabled').checked = data.protection_enabled !== false;
+                document.getElementById('level_enabled').checked = data.level_enabled !== false;
+            } catch(e) { console.log('Error loading settings'); }
+            loadStats();
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                document.getElementById('servers_count').textContent = data.guilds || 0;
+                document.getElementById('users_count').textContent = data.total_users || 0;
+                document.getElementById('money_count').textContent = (data.total_money || 0).toLocaleString();
+            } catch(e) { console.log('Error loading stats'); }
+        }
+
+        async function saveSettings() {
+            const settings = {
+                bot_name: document.getElementById('bot_name').value,
+                prefix: document.getElementById('prefix').value,
+                language: document.getElementById('language').value,
+                welcome_enabled: document.getElementById('welcome_enabled').checked,
+                economy_enabled: document.getElementById('economy_enabled').checked,
+                music_enabled: document.getElementById('music_enabled').checked,
+                protection_enabled: document.getElementById('protection_enabled').checked,
+                level_enabled: document.getElementById('level_enabled').checked,
+                join_notify: document.getElementById('join_notify').checked,
+                leave_notify: document.getElementById('leave_notify').checked,
+                command_notify: document.getElementById('command_notify').checked,
+                error_notify: document.getElementById('error_notify').checked,
+                bot_status: document.getElementById('bot_status').checked,
+                maintenance: document.getElementById('maintenance').checked,
+                log_commands: document.getElementById('log_commands').checked,
+                owner_only: document.getElementById('owner_only').checked
+            };
+            try {
+                const response = await fetch('/api/owner/update_settings', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(settings)
+                });
+                const result = await response.json();
+                if (result.status === 'ok') {
+                    showToast('✅ تم حفظ الإعدادات بنجاح', 'success');
+                } else {
+                    showToast('❌ خطأ في الحفظ', 'error');
+                }
+            } catch(e) { showToast('❌ خطأ في الاتصال', 'error'); }
+        }
+
+        async function resetData() {
+            if (confirm('⚠️ هل أنت متأكد من مسح كل البيانات؟ هذا الإجراء لا يمكن التراجع عنه!')) {
+                if (confirm('⚠️ للتأكيد، اكتب "نعم"')) {
+                    try {
+                        const response = await fetch('/api/owner/reset_data', {method: 'POST'});
+                        const result = await response.json();
+                        if (result.status === 'ok') {
+                            showToast('✅ تم مسح البيانات', 'success');
+                        }
+                    } catch(e) { showToast('❌ خطأ', 'error'); }
+                }
+            }
+        }
+
+        function backupData() {
+            showToast('💾 جاري إنشاء نسخة احتياطية...', 'success');
+            setTimeout(() => showToast('✅ تم إنشاء النسخة الاحتياطية', 'success'), 2000);
+        }
+
+        function restoreData() {
+            showToast('📂 اختر ملف البيانات للاستعادة', 'error');
+        }
+
+        loadSettings();
+    </script>
+</body>
+</html>

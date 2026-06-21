@@ -1,0 +1,115 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAX BOT - جميع الأوامر</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',sans-serif}
+        body{background:#0f172a;color:#f8fafc;min-height:100vh}
+        .header{background:linear-gradient(135deg,#1e293b,#0f172a);padding:30px 40px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center}
+        .header h1{font-size:24px;display:flex;align-items:center;gap:10px}
+        .header h1 i{color:#6366f1}
+        .header a{color:#94a3b8;text-decoration:none;transition:.2s;display:flex;align-items:center;gap:6px}
+        .header a:hover{color:#6366f1}
+        .container{max-width:1000px;margin:0 auto;padding:30px 20px}
+        .search-box{background:#1e293b;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 20px;display:flex;align-items:center;gap:12px;margin-bottom:30px}
+        .search-box input{background:none;border:none;color:#f8fafc;width:100%;font-size:16px;outline:none;font-family:'Cairo',sans-serif}
+        .search-box input::placeholder{color:#64748b}
+        .search-box i{color:#64748b;font-size:18px}
+        .tabs{display:flex;gap:10px;margin-bottom:25px;flex-wrap:wrap}
+        .tabs button{padding:10px 20px;border-radius:10px;border:none;cursor:pointer;font-size:14px;font-weight:500;transition:.3s;font-family:'Cairo',sans-serif}
+        .tab-all{background:#6366f1;color:#fff}
+        .tab-prefix{background:rgba(99,102,241,0.2);color:#6366f1}
+        .tab-slash{background:rgba(16,185,129,0.2);color:#10b981}
+        .tabs button:hover{transform:translateY(-2px)}
+        .tabs button.active{transform:translateY(-2px);box-shadow:0 8px 20px rgba(99,102,241,0.3)}
+        .category{margin-bottom:30px}
+        .category h2{font-size:18px;font-weight:700;margin-bottom:15px;display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:2px solid rgba(99,102,241,0.3)}
+        .category h2 i{color:#6366f1;font-size:20px}
+        .category h2 span{background:rgba(99,102,241,0.2);color:#6366f1;font-size:12px;padding:2px 10px;border-radius:10px}
+        .cmd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+        .cmd-item{background:#1e293b;border:1px solid rgba(255,255,255,0.05);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;transition:.3s;cursor:default}
+        .cmd-item:hover{background:rgba(99,102,241,0.1);border-color:rgba(99,102,241,0.3);transform:translateY(-2px)}
+        .cmd-badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;flex-shrink:0}
+        .cmd-badge.prefix{background:rgba(99,102,241,0.2);color:#6366f1}
+        .cmd-badge.slash{background:rgba(16,185,129,0.2);color:#10b981}
+        .cmd-name{font-weight:600;font-size:14px;min-width:80px}
+        .cmd-desc{color:#94a3b8;font-size:13px;flex:1}
+        .cmd-prefix{color:#6366f1;font-size:13px;font-weight:500;margin-left:4px}
+        .count-badge{text-align:center;color:#64748b;margin-top:20px;font-size:14px}
+        .count-badge span{color:#6366f1;font-weight:700}
+        .footer{text-align:center;padding:30px;color:#475569;font-size:13px;border-top:1px solid rgba(255,255,255,0.05)}
+        .footer a{color:#6366f1;text-decoration:none}
+        @media(max-width:600px){.cmd-grid{grid-template-columns:1fr}.header{padding:20px;flex-direction:column;gap:10px;text-align:center}}
+    </style>
+</head>
+<body>
+<div class="header">
+    <h1><i class="fas fa-terminal"></i> جميع أوامر MAX BOT</h1>
+    <a href="/login"><i class="fas fa-arrow-left"></i> العودة</a>
+</div>
+<div class="container">
+    <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" id="searchInput" placeholder="ابحث عن أمر..." oninput="filterCommands()">
+    </div>
+    <div class="tabs">
+        <button class="tab-all active" onclick="filterTab('all',this)">الكل</button>
+        <button class="tab-prefix" onclick="filterTab('!',this)"><i class="fas fa-hashtag"></i> أوامر !</button>
+        <button class="tab-slash" onclick="filterTab('/',this)"><i class="fas fa-terminal"></i> أوامر /</button>
+    </div>
+    {% for cat, cmds in categories.items() %}
+    <div class="category" data-category="{{ cat }}">
+        <h2>
+            {% if cat == 'افتراضي' %}<i class="fas fa-home"></i>
+            {% elif cat == 'إدارة' %}<i class="fas fa-shield-alt"></i>
+            {% elif cat == 'تذاكر' %}<i class="fas fa-ticket-alt"></i>
+            {% elif cat == 'اقتصاد' %}<i class="fas fa-coins"></i>
+            {% elif cat == 'مستويات' %}<i class="fas fa-chart-line"></i>
+            {% elif cat == 'موسيقى' %}<i class="fas fa-music"></i>
+            {% elif cat == 'صوت' %}<i class="fas fa-microphone"></i>
+            {% elif cat == 'معلومات' %}<i class="fas fa-info-circle"></i>
+            {% else %}<i class="fas fa-folder"></i>
+            {% endif %}
+            {{ cat }}
+            <span>{{ cmds|length }}</span>
+        </h2>
+        <div class="cmd-grid">
+            {% for cmd in cmds %}
+            <div class="cmd-item" data-type="{{ cmd.type }}" data-name="{{ cmd.name }}">
+                <span class="cmd-badge {{ 'prefix' if cmd.type == '!' else 'slash' }}">{{ cmd.type }}</span>
+                <span class="cmd-name"><span class="cmd-prefix">{{ cmd.type }}</span>{{ cmd.name }}</span>
+                <span class="cmd-desc">{{ cmd.desc }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+    <div class="count-badge">إجمالي الأوامر: <span>{{ total }}</span></div>
+</div>
+<div class="footer">
+    MAX BOT Bot | <a href="/terms">شروط الخدمة</a> | <a href="/privacy">سياسة الخصوصية</a>
+</div>
+<script>
+function filterCommands(){
+    var q = document.getElementById('searchInput').value.trim().toLowerCase();
+    document.querySelectorAll('.cmd-item').forEach(function(el){
+        var name = el.getAttribute('data-name').toLowerCase();
+        var desc = el.querySelector('.cmd-desc').textContent.toLowerCase();
+        el.style.display = (name.includes(q) || desc.includes(q)) ? '' : 'none';
+    });
+}
+function filterTab(type, btn){
+    document.querySelectorAll('.tabs button').forEach(function(b){ b.classList.remove('active') });
+    btn.classList.add('active');
+    document.querySelectorAll('.cmd-item').forEach(function(el){
+        if(type === 'all'){ el.style.display = ''; return; }
+        el.style.display = el.getAttribute('data-type') === type ? '' : 'none';
+    });
+}
+</script>
+</body>
+</html>

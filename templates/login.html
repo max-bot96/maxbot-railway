@@ -1,0 +1,492 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAX BOT - بوت Discord احترافي متكامل | إدارة وحماية وتذاكر</title>
+    <meta name="description" content="MAX BOT هو بوت Discord احترافي عربي متكامل. يوفر حماية متقدمة، نظام تذاكر ذكي، صيد هاكرز، موسيقى، وأوامر إدارة شاملة. مجاناً بالكامل.">
+    <meta name="keywords" content="discord bot, بوت ديسكورد, بوت عربي, إدارة سيرفر, حماية, تذاكر, صيد, موسيقى, MAX BOT, discord management, server protection">
+    <meta name="author" content="MAX BOT Team">
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+    <meta name="googlebot" content="index, follow">
+    <meta name="google-site-verification" content="GAG0zlfqkXcxNzfxFLRflfvgNpKJL_QQEHf8VZU5rEQ" />
+    <meta property="og:title" content="MAX BOT - بوت Discord احترافي متكامل">
+    <meta property="og:description" content="بوت Discord عربي مع حماية متقدمة، تذاكر ذكية، صيد هاكرز، موسيقى، وأكثر. مجاني بالكامل.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://max-bot-add.onrender.com">
+    <meta property="og:site_name" content="MAX BOT">
+    <meta property="og:locale" content="ar_AR">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="MAX BOT - بوت Discord احترافي">
+    <meta name="twitter:description" content="بوت Discord عربي متكامل. حماية، تذاكر، صيد، موسيقى. مجاني.">
+    <link rel="canonical" href="https://max-bot-add.onrender.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "MAX BOT",
+        "applicationCategory": "SocialNetworkingApplication",
+        "operatingSystem": "Discord",
+        "description": "بوت Discord احترافي عربي مع حماية متقدمة وتذاكر ذكية ونظام صيد وموسيقى",
+        "url": "https://max-bot-add.onrender.com",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    }
+    </script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',sans-serif}
+        :root{
+            --primary:#6366f1;--primary-l:#818cf8;--primary-d:#4f46e5;
+            --accent:#a78bfa;--accent2:#c084fc;
+            --green:#10b981;--green-l:#34d399;
+            --bg:#060a13;--bg2:#0c1220;--bg3:#131b2e;
+            --text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;
+            --glass:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.06);
+        }
+        body{
+            background:var(--bg);color:var(--text);
+            min-height:100vh;overflow-x:hidden;
+            display:flex;flex-direction:column;
+        }
+
+        /* === Animated Background === */
+        .bg-effects{position:fixed;inset:0;z-index:0;overflow:hidden}
+        .bg-gradient{position:absolute;border-radius:50%;filter:blur(120px);opacity:0.12;animation:float 20s infinite ease-in-out}
+        .bg-gradient.p1{width:600px;height:600px;background:#6366f1;top:-200px;right:-200px}
+        .bg-gradient.p2{width:500px;height:500px;background:#8b5cf6;bottom:-200px;left:-200px;animation-delay:-7s}
+        .bg-gradient.p3{width:400px;height:400px;background:#a855f7;top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:-14s}
+        @keyframes float{0%,100%{transform:translate(0,0) scale(1)}25%{transform:translate(50px,-80px) scale(1.1)}50%{transform:translate(-30px,60px) scale(0.9)}75%{transform:translate(80px,30px) scale(1.05)}}
+
+        .stars{position:fixed;inset:0;z-index:0}
+        .star{position:absolute;width:2px;height:2px;background:white;border-radius:50%;animation:twinkle var(--dur) infinite ease-in-out}
+        @keyframes twinkle{0%,100%{opacity:0.1}50%{opacity:var(--max-o)}}
+
+        .grid-overlay{
+            position:fixed;inset:0;z-index:0;
+            background-image:
+                linear-gradient(rgba(99,102,241,0.02) 1px,transparent 1px),
+                linear-gradient(90deg,rgba(99,102,241,0.02) 1px,transparent 1px);
+            background-size:60px 60px;
+            mask-image:radial-gradient(ellipse at center,black 30%,transparent 70%);
+        }
+
+        /* === Navbar === */
+        .navbar{
+            position:fixed;top:0;left:0;right:0;z-index:100;
+            background:rgba(6,10,19,0.8);backdrop-filter:blur(30px) saturate(150%);
+            border-bottom:1px solid var(--border);
+            padding:0 40px;height:72px;
+            display:flex;justify-content:space-between;align-items:center;
+        }
+        .navbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(99,102,241,0.3),rgba(168,85,247,0.3),transparent)}
+        .nav-logo{display:flex;align-items:center;gap:12px;text-decoration:none}
+        .nav-logo i{font-size:28px;background:linear-gradient(135deg,var(--primary),var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .nav-logo span{font-size:22px;font-weight:900;color:var(--text);letter-spacing:-0.5px}
+        .nav-logo .ver{background:rgba(99,102,241,0.15);color:var(--accent);font-size:10px;padding:3px 10px;border-radius:8px;font-weight:700;border:1px solid rgba(99,102,241,0.2)}
+        .nav-links{display:flex;gap:8px;align-items:center}
+        .nav-links a{
+            color:var(--text2);text-decoration:none;font-size:14px;font-weight:600;
+            padding:10px 18px;border-radius:12px;transition:all 0.3s;
+        }
+        .nav-links a:hover{color:var(--accent);background:rgba(99,102,241,0.1)}
+        .nav-links .btn-login{
+            background:linear-gradient(135deg,var(--primary),var(--accent2));
+            color:#fff;padding:10px 24px;border-radius:12px;
+            box-shadow:0 4px 16px rgba(99,102,241,0.3);
+        }
+        .nav-links .btn-login:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(99,102,241,0.4)}
+
+        /* === Hero Section === */
+        .hero{
+            position:relative;z-index:10;
+            min-height:100vh;display:flex;align-items:center;justify-content:center;
+            padding:120px 40px 80px;text-align:center;
+        }
+        .hero-content{max-width:800px}
+        .hero-badge{
+            display:inline-flex;align-items:center;gap:8px;
+            background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);
+            color:var(--green-l);padding:8px 20px;border-radius:24px;
+            font-size:13px;font-weight:600;margin-bottom:28px;
+            animation:fadeInUp 0.6s 0.2s both
+        }
+        .hero-badge .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(16,185,129,0.6);animation:blink 2s infinite}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:0.4}}
+
+        .hero h1{
+            font-size:64px;font-weight:900;letter-spacing:-1.5px;
+            line-height:1.1;margin-bottom:20px;
+            animation:fadeInUp 0.6s 0.3s both
+        }
+        .hero h1 .gradient{
+            background:linear-gradient(135deg,#fff 0%,#c4b5fd 40%,#a78bfa 70%,#818cf8 100%);
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+        }
+        .hero h1 .accent{
+            background:linear-gradient(135deg,var(--primary),var(--accent),var(--accent2));
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+        }
+        .hero p{
+            font-size:20px;color:var(--text2);line-height:1.7;
+            margin-bottom:40px;max-width:600px;margin-left:auto;margin-right:auto;
+            animation:fadeInUp 0.6s 0.4s both
+        }
+
+        .hero-buttons{
+            display:flex;gap:16px;justify-content:center;flex-wrap:wrap;
+            animation:fadeInUp 0.6s 0.5s both
+        }
+        .btn-hero{
+            padding:18px 36px;border:none;border-radius:16px;
+            font-size:17px;font-weight:700;cursor:pointer;
+            transition:all 0.3s cubic-bezier(0.16,1,0.3,1);
+            display:flex;align-items:center;gap:12px;
+            text-decoration:none;font-family:'Cairo',sans-serif;
+        }
+        .btn-primary{
+            background:linear-gradient(135deg,#5865F2,#7289DA);
+            color:#fff;box-shadow:0 4px 24px rgba(88,101,242,0.35);
+        }
+        .btn-primary:hover{transform:translateY(-4px);box-shadow:0 8px 32px rgba(88,101,242,0.5)}
+        .btn-primary i{font-size:24px}
+        .btn-secondary{
+            background:rgba(255,255,255,0.04);color:var(--text);
+            border:1px solid var(--border);
+        }
+        .btn-secondary:hover{background:rgba(99,102,241,0.1);border-color:rgba(99,102,241,0.25);transform:translateY(-3px)}
+        .btn-secondary i{font-size:20px}
+
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+
+        /* === Features Section === */
+        .features-section{
+            position:relative;z-index:10;
+            padding:80px 40px;max-width:1200px;margin:0 auto;
+        }
+        .section-title{
+            text-align:center;margin-bottom:48px;
+        }
+        .section-title h2{font-size:36px;font-weight:900;margin-bottom:12px}
+        .section-title p{color:var(--text3);font-size:16px}
+        .section-title .line{
+            width:60px;height:3px;border-radius:2px;
+            background:linear-gradient(90deg,var(--primary),var(--accent));
+            margin:16px auto 0
+        }
+
+        .features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+        @media(max-width:900px){.features-grid{grid-template-columns:repeat(2,1fr)}}
+        @media(max-width:600px){.features-grid{grid-template-columns:1fr}}
+
+        .feature-card{
+            background:linear-gradient(135deg,rgba(12,18,32,0.8),rgba(12,18,32,0.4));
+            border:1px solid var(--border);border-radius:20px;
+            padding:32px 28px;text-align:center;
+            transition:all 0.4s cubic-bezier(0.16,1,0.3,1);
+            position:relative;overflow:hidden;
+        }
+        .feature-card::before{
+            content:'';position:absolute;top:0;left:0;right:0;height:2px;
+            background:linear-gradient(90deg,transparent,var(--primary),var(--accent),transparent);
+            opacity:0;transition:0.4s
+        }
+        .feature-card:hover{transform:translateY(-8px);border-color:rgba(99,102,241,0.2);box-shadow:0 24px 48px rgba(0,0,0,0.3)}
+        .feature-card:hover::before{opacity:1}
+        .feature-icon{
+            width:64px;height:64px;border-radius:18px;
+            display:flex;align-items:center;justify-content:center;
+            margin:0 auto 20px;font-size:28px;
+            background:rgba(99,102,241,0.1);color:var(--accent);
+            transition:0.3s
+        }
+        .feature-card:hover .feature-icon{background:rgba(99,102,241,0.2);transform:scale(1.1)}
+        .feature-card h3{font-size:18px;font-weight:800;margin-bottom:8px}
+        .feature-card p{font-size:14px;color:var(--text3);line-height:1.6}
+
+        /* === Stats Section === */
+        .stats-section{
+            position:relative;z-index:10;
+            padding:60px 40px;max-width:1000px;margin:0 auto;
+        }
+        .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+        @media(max-width:768px){.stats-row{grid-template-columns:repeat(2,1fr)}}
+        .stat-item{text-align:center;padding:24px}
+        .stat-number{
+            font-size:42px;font-weight:900;
+            background:linear-gradient(135deg,var(--accent),var(--accent2));
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+            margin-bottom:4px
+        }
+        .stat-label{color:var(--text3);font-size:14px;font-weight:600}
+
+        /* === CTA Section === */
+        .cta-section{
+            position:relative;z-index:10;
+            padding:80px 40px;text-align:center;
+        }
+        .cta-box{
+            max-width:700px;margin:0 auto;
+            background:linear-gradient(135deg,rgba(99,102,241,0.1),rgba(168,85,247,0.05));
+            border:1px solid rgba(99,102,241,0.15);
+            border-radius:28px;padding:48px 40px;
+        }
+        .cta-box h2{font-size:32px;font-weight:900;margin-bottom:12px}
+        .cta-box p{color:var(--text3);font-size:16px;margin-bottom:28px}
+
+        /* === Footer === */
+        .footer{
+            position:relative;z-index:10;
+            border-top:1px solid var(--border);
+            padding:32px 40px;text-align:center;
+        }
+        .footer-links{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;margin-bottom:16px}
+        .footer-links a{color:var(--text3);text-decoration:none;font-size:13px;font-weight:600;transition:0.3s}
+        .footer-links a:hover{color:var(--accent)}
+        .footer-copy{color:var(--text3);font-size:12px}
+
+        /* === Version Badge === */
+        .version-badge{
+            position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+            background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);
+            color:var(--text3);font-size:11px;padding:6px 16px;border-radius:20px;
+            font-weight:600;z-index:10
+        }
+
+        /* Responsive */
+        @media(max-width:768px){
+            .navbar{padding:0 20px}
+            .nav-links a:not(.btn-login){display:none}
+            .hero{padding:120px 20px 60px}
+            .hero h1{font-size:36px}
+            .hero p{font-size:16px}
+            .features-section,.stats-section,.cta-section{padding:40px 20px}
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Effects -->
+    <div class="bg-effects">
+        <div class="bg-gradient p1"></div>
+        <div class="bg-gradient p2"></div>
+        <div class="bg-gradient p3"></div>
+    </div>
+    <div class="stars" id="stars"></div>
+    <div class="grid-overlay"></div>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a href="/" class="nav-logo">
+            <i class="fas fa-rocket"></i>
+            <span>MAX <span style="color:var(--accent)">BOT</span></span>
+            <span class="ver">v2.0</span>
+        </a>
+        <div class="nav-links">
+            <a href="/commands"><i class="fas fa-terminal"></i> الأوامر</a>
+            <a href="/support"><i class="fab fa-discord"></i> الدعم</a>
+            <a href="https://discord.com/oauth2/authorize?client_id=1475142485012516944&permissions=8&scope=bot%20applications.commands" target="_blank"><i class="fas fa-plus-circle"></i> أضف البوت</a>
+            <a href="https://discord.com/api/oauth2/authorize?client_id=1475142485012516944&redirect_uri={{ redirect_uri | urlencode }}&response_type=code&scope=identify" class="btn-login"><i class="fab fa-discord"></i> تسجيل الدخول</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="dot"></span>
+                البوت يعمل بأعلى كفاءة
+            </div>
+            <h1>
+                <span class="gradient">بوت إدارة</span><br>
+                <span class="accent">احترافي متكامل</span>
+            </h1>
+            <p>
+                MAX BOT هو بوت Discord احترافي يوفر לך كل ما تحتاجه لإدارة سيرفرك بذكاء —
+                حماية متقدمة، تذاكر ذكية، نظام صيد، موسيقى، وأوامر إدارة شاملة.
+            </p>
+            {% if error %}
+            <div class="alert-error" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;padding:14px 24px;border-radius:14px;margin-bottom:24px;font-size:15px;font-weight:600;animation:fadeInUp 0.4s both">
+                <i class="fas fa-exclamation-triangle" style="margin-left:8px"></i>{{ error }}
+            </div>
+            {% endif %}
+
+            <div class="hero-buttons">
+                <a href="https://discord.com/api/oauth2/authorize?client_id=1475142485012516944&redirect_uri={{ redirect_uri | urlencode }}&response_type=code&scope=identify" class="btn-hero btn-primary">
+                    <i class="fab fa-discord"></i>
+                    تسجيل الدخول بـ Discord
+                </a>
+                <a href="https://discord.com/oauth2/authorize?client_id=1475142485012516944&permissions=8&scope=bot%20applications.commands" target="_blank" class="btn-hero btn-secondary">
+                    <i class="fas fa-plus-circle"></i>
+                    أضف البوت لسيرفرك
+                </a>
+            </div>
+
+            <div style="margin-top:16px;animation:fadeInUp 0.6s 0.55s both">
+                <button onclick="var f=document.getElementById('manual-form');f.style.display=f.style.display==='none'?'block':'none'" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:600">
+                    <i class="fas fa-key" style="margin-left:4px"></i>تسجيل دخول بديل
+                </button>
+            </div>
+
+            {% if show_captcha %}
+            <div id="manual-form" style="margin-top:40px;max-width:420px;margin-left:auto;margin-right:auto;animation:fadeInUp 0.6s 0.6s both;display:none">
+                <div style="background:linear-gradient(135deg,rgba(12,18,32,0.9),rgba(12,18,32,0.6));border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:32px 28px;backdrop-filter:blur(20px)">
+                    <div style="text-align:center;margin-bottom:24px">
+                        <div style="width:56px;height:56px;border-radius:16px;background:rgba(99,102,241,0.15);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px">
+                            <i class="fas fa-lock" style="font-size:24px;color:var(--accent)"></i>
+                        </div>
+                        <h3 style="font-size:18px;font-weight:800;margin-bottom:4px">تسجيل دخول مباشر</h3>
+                        <p style="font-size:13px;color:var(--text3)">أدخل رقم التعريف والإجابة الأمنية</p>
+                    </div>
+
+                    <form method="POST" action="/login" id="captchaForm">
+                        <div style="margin-bottom:16px">
+                            <label style="display:block;font-size:13px;font-weight:700;color:var(--text2);margin-bottom:8px">رقم التعريف</label>
+                            <input type="text" name="user_id" required maxlength="30" pattern="[0-9]+"
+                                style="width:100%;padding:14px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--text);font-size:15px;font-family:'Cairo',sans-serif;font-weight:600;outline:none;transition:0.3s"
+                                onfocus="this.style.borderColor='rgba(99,102,241,0.4)';this.style.boxShadow='0 0 0 3px rgba(99,102,241,0.1)'"
+                                onblur="this.style.borderColor='rgba(255,255,255,0.08)';this.style.boxShadow='none'"
+                                placeholder="أدخل رقم التعريف...">
+                        </div>
+
+                        <div style="margin-bottom:16px">
+                            <label style="display:block;font-size:13px;font-weight:700;color:var(--text2);margin-bottom:8px">
+                                <i class="fas fa-shield-alt" style="margin-left:4px"></i>أجب على السؤال
+                            </label>
+                            <div style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:14px 18px;text-align:center;margin-bottom:10px">
+                                <span style="font-size:22px;font-weight:900;color:var(--accent);letter-spacing:2px">{{ captcha_question }} = ?</span>
+                            </div>
+                            <input type="text" name="captcha_answer" required maxlength="10" inputmode="numeric"
+                                autocomplete="off"
+                                style="width:100%;padding:14px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--text);font-size:15px;font-family:'Cairo',sans-serif;font-weight:600;text-align:center;outline:none;transition:0.3s"
+                                onfocus="this.style.borderColor='rgba(99,102,241,0.4)';this.style.boxShadow='0 0 0 3px rgba(99,102,241,0.1)'"
+                                onblur="this.style.borderColor='rgba(255,255,255,0.08)';this.style.boxShadow='none'"
+                                placeholder="اكتب الإجابة...">
+                            <input type="hidden" name="captcha_token" value="{{ captcha_token }}">
+                        </div>
+
+                        <button type="submit"
+                            style="width:100%;padding:16px;border:none;border-radius:14px;background:linear-gradient(135deg,var(--primary),var(--accent2));color:#fff;font-size:16px;font-weight:800;font-family:'Cairo',sans-serif;cursor:pointer;transition:all 0.3s;box-shadow:0 4px 20px rgba(99,102,241,0.3)"
+                            onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 28px rgba(99,102,241,0.45)'"
+                            onmouseout="this.style.transform='none';this.style.boxShadow='0 4px 20px rgba(99,102,241,0.3)'">
+                            <i class="fas fa-sign-in-alt" style="margin-left:8px"></i>تسجيل الدخول
+                        </button>
+                    </form>
+
+                    <div style="text-align:center;margin-top:16px">
+                        <span style="font-size:11px;color:var(--text3)"><i class="fas fa-lock" style="margin-left:4px"></i>حماية متقدمة مع CAPTCHA</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section">
+        <div class="section-title">
+            <h2>المميزات الرئيسية</h2>
+            <p>كل ما تحتاجه في مكان واحد</p>
+            <div class="line"></div>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
+                <h3>حماية متقدمة</h3>
+                <p>نظام حماية شامل ضد السبام، الاختراق، والهجمات — مع حماية الرتب والرومات</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><i class="fas fa-ticket-alt"></i></div>
+                <h3>نظام التذاكر</h3>
+                <p>تذاكر ذكية مع شخصيات AI مخصصة لكل تصنيف — فتح، إغلاق، وحفظ تلقائي</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><i class="fas fa-user-secret"></i></div>
+                <h3>صيد الهاكرز</h3>
+                <p>نظام فخ متقدم للكشف عن الهاكرز وطردهم تلقائياً مع تقرير مفصل</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><i class="fas fa-music"></i></div>
+                <h3>موسيقى عالية</h3>
+                <p>تشغيل موسيقى بجودة عالية مع فلاتر وتحكم كامل في القائمة</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><i class="fas fa-gamepad"></i></div>
+                <h3>نظام الألعاب</h3>
+                <p> quizzes برمجية، تتبع النشاط، ومسابقات تفاعلية مع نظام مستويات</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
+                <h3>لوحة تحكم</h3>
+                <p>لوحة تحكم احترافية مع إحصائيات مباشرة وسجل الأوامر الكامل</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section">
+        <div class="stats-row">
+            <div class="stat-item">
+                <div class="stat-number">{{ total_commands if total_commands else '0' }}+</div>
+                <div class="stat-label">أمر متوفر</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">11</div>
+                <div class="stat-label">قنوات لوق</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">24/7</div>
+                <div class="stat-label">دعم مستمر</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">100%</div>
+                <div class="stat-label">مجاني بالكامل</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="cta-box">
+            <h2>جاهز للبدء؟</h2>
+            <p>أضف MAX BOT لسيرفرك الآن واحصل على تجربة إدارة احترافية</p>
+            <a href="https://discord.com/oauth2/authorize?client_id=1475142485012516944&permissions=8&scope=bot%20applications.commands" target="_blank" class="btn-hero btn-primary">
+                <i class="fas fa-plus-circle"></i>
+                أضف البوت الآن
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-links">
+            <a href="/commands"><i class="fas fa-terminal"></i> الأوامر</a>
+            <a href="/terms"><i class="fas fa-file-contract"></i> الشروط</a>
+            <a href="/privacy"><i class="fas fa-shield-alt"></i> الخصوصية</a>
+            <a href="/support"><i class="fab fa-discord"></i> الدعم</a>
+            <a href="mailto:MaxoptSupportTeam@gmail.com"><i class="fas fa-envelope"></i> Email</a>
+            <a href="https://github.com/max-bot96/max-bot" target="_blank"><i class="fab fa-github"></i> GitHub</a>
+            <a href="https://t.me/maxpot_0" target="_blank"><i class="fab fa-telegram"></i> Telegram</a>
+        </div>
+        <div class="footer-copy">© 2026 MAX BOT. جميع الحقوق محفوظة.</div>
+    </footer>
+
+    <div class="version-badge">MAX BOT v2.0</div>
+
+    <script>
+    (function(){
+        const c=document.getElementById('stars');
+        for(let i=0;i<100;i++){
+            const s=document.createElement('div');
+            s.className='star';
+            s.style.left=Math.random()*100+'%';
+            s.style.top=Math.random()*100+'%';
+            s.style.setProperty('--dur',(2+Math.random()*4)+'s');
+            s.style.setProperty('--max-o',(0.3+Math.random()*0.7));
+            s.style.animationDelay=Math.random()*4+'s';
+            s.style.width=s.style.height=(1+Math.random()*2)+'px';
+            c.appendChild(s);
+        }
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAX BOT - بوت Discord احترافي متكامل | إدارة وحماية وتذاكر</title>
+    <meta name="description" content="MAX BOT هو بوت Discord احترافي عربي متكامل. يوفر حماية متقدمة، نظام تذاكر ذكي، صيد هاكرز، موسيقى، وأوامر إدارة شاملة. مجاناً بالكامل.">
+    <meta name="keywords" content="discord bot, بوت ديسكورد, بوت عربي, إدارة سيرفر, حماية, تذاكر, صيد, موسيقى, MAX BOT, discord management, server protection, discord bot free, بوت ديسكورد مجاني">
+    <meta name="author" content="MAX BOT Team">
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+    <meta name="googlebot" content="index, follow">
+    <meta name="google-site-verification" content="GAG0zlfqkXcxNzfxFLRflfvgNpKJL_QQEHf8VZU5rEQ" />
+    <meta property="og:title" content="MAX BOT - بوت Discord احترافي متكامل">
+    <meta property="og:description" content="بوت Discord عربي مع حماية متقدمة، تذاكر ذكية، صيد هاكرز، موسيقى، وأكثر. مجاني بالكامل.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://max-bot-add.onrender.com">
+    <meta property="og:site_name" content="MAX BOT">
+    <meta property="og:locale" content="ar_AR">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="MAX BOT - بوت Discord احترافي">
+    <meta name="twitter:description" content="بوت Discord عربي متكامل. حماية، تذاكر، صيد، موسيقى. مجاني.">
+    <link rel="canonical" href="https://max-bot-add.onrender.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "MAX BOT",
+        "applicationCategory": "SocialNetworkingApplication",
+        "operatingSystem": "Discord",
+        "description": "بوت Discord احترافي عربي مع حماية متقدمة وتذاكر ذكية ونظام صيد وموسيقى",
+        "url": "https://max-bot-add.onrender.com",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    }
+    </script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',sans-serif}
+        :root{
+            --primary:#6366f1;--primary-l:#818cf8;--primary-d:#4f46e5;
+            --accent:#a78bfa;--accent2:#c084fc;
+            --green:#10b981;--green-l:#34d399;
+            --bg:#060a13;--bg2:#0c1220;--bg3:#131b2e;
+            --text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;
+        }
+        body{background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+        .bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+        .bg .orb{position:absolute;border-radius:50%;filter:blur(120px);opacity:0.1;animation:fl 20s infinite ease-in-out}
+        .bg .o1{width:600px;height:600px;background:#6366f1;top:-200px;right:-200px}
+        .bg .o2{width:500px;height:500px;background:#8b5cf6;bottom:-200px;left:-200px;animation-delay:-7s}
+        @keyframes fl{0%,100%{transform:translate(0,0)}50%{transform:translate(50px,-80px)}}
+        .wrap{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:40px 20px}
+        .hero{text-align:center;padding:80px 0 60px}
+        .badge{display:inline-flex;align-items:center;gap:8px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);color:var(--green-l);padding:8px 20px;border-radius:24px;font-size:13px;font-weight:600;margin-bottom:28px}
+        .badge .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(16,185,129,0.6);animation:blink 2s infinite}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:0.4}}
+        h1{font-size:56px;font-weight:900;letter-spacing:-1px;line-height:1.1;margin-bottom:20px}
+        h1 .grad{background:linear-gradient(135deg,#fff,#c4b5fd,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .sub{font-size:20px;color:var(--text2);line-height:1.7;margin-bottom:40px;max-width:600px;margin-left:auto;margin-right:auto}
+        .btns{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:60px}
+        .btn{padding:18px 36px;border:none;border-radius:16px;font-size:17px;font-weight:700;cursor:pointer;transition:all 0.3s;display:flex;align-items:center;gap:12px;text-decoration:none;font-family:'Cairo',sans-serif}
+        .btn1{background:linear-gradient(135deg,#5865F2,#7289DA);color:#fff;box-shadow:0 4px 24px rgba(88,101,242,0.35)}
+        .btn1:hover{transform:translateY(-4px);box-shadow:0 8px 32px rgba(88,101,242,0.5)}
+        .btn2{background:rgba(255,255,255,0.04);color:var(--text);border:1px solid rgba(255,255,255,0.06)}
+        .btn2:hover{background:rgba(99,102,241,0.1);border-color:rgba(99,102,241,0.25);transform:translateY(-3px)}
+        .features{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:60px}
+        @media(max-width:900px){.features{grid-template-columns:repeat(2,1fr)}}
+        @media(max-width:600px){.features{grid-template-columns:1fr}}
+        .fcard{background:linear-gradient(135deg,rgba(12,18,32,0.8),rgba(12,18,32,0.4));border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:32px 28px;text-align:center;transition:all 0.4s}
+        .fcard:hover{transform:translateY(-8px);border-color:rgba(99,102,241,0.2);box-shadow:0 24px 48px rgba(0,0,0,0.3)}
+        .ficon{width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px;background:rgba(99,102,241,0.1);color:var(--accent)}
+        .fcard:hover .ficon{background:rgba(99,102,241,0.2);transform:scale(1.1)}
+        .fcard h3{font-size:18px;font-weight:800;margin-bottom:8px}
+        .fcard p{font-size:14px;color:var(--text3);line-height:1.6}
+        .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:60px}
+        @media(max-width:768px){.stats{grid-template-columns:repeat(2,1fr)}}
+        .stat{text-align:center;padding:24px}
+        .stat .num{font-size:42px;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .stat .lbl{color:var(--text3);font-size:14px;font-weight:600}
+        .cta{text-align:center;padding:60px 0}
+        .cta-box{max-width:700px;margin:0 auto;background:linear-gradient(135deg,rgba(99,102,241,0.1),rgba(168,85,247,0.05));border:1px solid rgba(99,102,241,0.15);border-radius:28px;padding:48px 40px}
+        .cta-box h2{font-size:32px;font-weight:900;margin-bottom:12px}
+        .cta-box p{color:var(--text3);font-size:16px;margin-bottom:28px}
+        footer{border-top:1px solid rgba(255,255,255,0.06);padding:32px 0;text-align:center}
+        .flinks{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;margin-bottom:16px}
+        .flinks a{color:var(--text3);text-decoration:none;font-size:13px;font-weight:600;transition:0.3s}
+        .flinks a:hover{color:var(--accent)}
+        .copy{color:var(--text3);font-size:12px}
+        .commands-section{margin-bottom:60px}
+        .commands-section h2{font-size:36px;font-weight:900;text-align:center;margin-bottom:12px}
+        .commands-section .sub{text-align:center;color:var(--text3);margin-bottom:32px}
+        .cmd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+        .cmd-item{background:rgba(12,18,32,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:20px;transition:0.3s}
+        .cmd-item:hover{border-color:rgba(99,102,241,0.2);transform:translateY(-2px)}
+        .cmd-item code{color:var(--accent);font-weight:700;font-size:15px}
+        .cmd-item p{color:var(--text3);font-size:13px;margin-top:6px;line-height:1.5}
+    </style>
+</head>
+<body>
+    <div class="bg"><div class="orb o1"></div><div class="orb o2"></div></div>
+    <div class="wrap">
+        <header class="hero">
+            <div class="badge"><span class="dot"></span> يعمل الآن على أكثر من 100 سيرفر</div>
+            <h1><span class="grad">MAX BOT</span><br>بوت Discord احترافي</h1>
+            <p class="sub">بوت عربي متكامل مع حماية متقدمة، نظام تذاكر ذكي، صيد هاكرز، موسيقى، وأكثر من 500 أمر إدارة. مجاني بالكامل.</p>
+            <div class="btns">
+                <a href="/login" class="btn btn1"><i class="fab fa-discord"></i> تسجيل الدخول بـ Discord</a>
+                <a href="/commands" class="btn btn2"><i class="fas fa-terminal"></i> عرض الأوامر</a>
+            </div>
+        </header>
+
+        <section class="features">
+            <div class="fcard">
+                <div class="ficon"><i class="fas fa-shield-halved"></i></div>
+                <h3>حماية متقدمة</h3>
+                <p>حماية من السبام، الهجوم، الحذف الجماعي، مع نظام عقوبات تلقائي</p>
+            </div>
+            <div class="fcard">
+                <div class="ficon"><i class="fas fa-ticket"></i></div>
+                <h3>نظام تذاكر ذكي</h3>
+                <p>تذاكر ب شخصيات AI مختلفة مع أرشيف كامل ونقل تلقائي</p>
+            </div>
+            <div class="fcard">
+                <div class="ficon"><i class="fas fa-bug"></i></div>
+                <h3>صيد الهاكرز</h3>
+                <p>كشف وصيد الهاكرز مع بصمة إلكترونية متقدمة و HoneyPot</p>
+            </div>
+            <div class="fcard">
+                <div class="ficon"><i class="fas fa-music"></i></div>
+                <h3>موسيقى</h3>
+                <p>تشغيل موسيقى من YouTube بجودة عالية مع تحكم كامل</p>
+            </div>
+            <div class="fcard">
+                <div class="ficon"><i class="fas fa-gamepad"></i></div>
+                <h3>مسابقة برمجية</h3>
+                <p>quiz برمجي مع نظام مستويات وشارة وألقاب</p>
+            </div>
+            <div class="fcard">
+                <div class="ficon"><i class="fas fa-terminal"></i></div>
+                <h3>500+ أمر</h3>
+                <p>أكثر من 500 أمر إدارة شامل مع لوحة تحكم ويب</p>
+            </div>
+        </section>
+
+        <section class="stats">
+            <div class="stat"><div class="num">500+</div><div class="lbl">أمر إدارة</div></div>
+            <div class="stat"><div class="num">11</div><div class="lbl">قناة سجلات</div></div>
+            <div class="stat"><div class="num">5</div><div class="lbl">شخصيات تذاكر</div></div>
+            <div class="stat"><div class="num">100%</div><div class="lbl">مجاني</div></div>
+        </section>
+
+        <section class="commands-section">
+            <h2>أوامر البوت</h2>
+            <p class="sub">أكثر من 500 أمر لإدارة سيرفرك</p>
+            <div class="cmd-grid">
+                <div class="cmd-item"><code>!ban</code><p>حظر عضو من السيرفر</p></div>
+                <div class="cmd-item"><code>!kick</code><p>طرد عضو من السيرفر</p></div>
+                <div class="cmd-item"><code>!mute</code><p>كتم عضو</p></div>
+                <div class="cmd-item"><code>!ticket</code><p>فتح تذكرة دعم</p></div>
+                <div class="cmd-item"><code>!backup</code><p>نسخ احتياطي للسيرفر</p></div>
+                <div class="cmd-item"><code>!protect</code><p>تفعيل الحماية</p></div>
+                <div class="cmd-item"><code>!play</code><p>تشغيل موسيقى</p></div>
+                <div class="cmd-item"><code>!quiz</code><p>مسابقة برمجية</p></div>
+                <div class="cmd-item"><code>!hunter</code><p>صيد حسابات</p></div>
+                <div class="cmd-item"><code>!afk</code><p>تفعيل وضع AFK</p></div>
+                <div class="cmd-item"><code>!poll</code><p>إنشاء استطلاع</p></div>
+                <div class="cmd-item"><code>!warn</code><p>تحذير عضو</p></div>
+            </div>
+            <div style="text-align:center;margin-top:24px">
+                <a href="/commands" class="btn btn2"><i class="fas fa-arrow-left"></i> عرض جميع الأوامر</a>
+            </div>
+        </section>
+
+        <section class="cta">
+            <div class="cta-box">
+                <h2>ابدأ الآن مجاناً</h2>
+                <p>أضف MAX BOT لسيرفرك في ثوانٍ واحصل على حماية وإدارة شاملة</p>
+                <a href="/login" class="btn btn1"><i class="fab fa-discord"></i> تسجيل الدخول</a>
+            </div>
+        </section>
+
+        <footer>
+            <div class="flinks">
+                <a href="/terms">الشروط</a>
+                <a href="/privacy">الخصوصية</a>
+                <a href="/support">الدعم</a>
+                <a href="/contact">التواصل</a>
+            </div>
+            <p class="copy">© 2026 MAX BOT. All rights reserved. Made with ❤️</p>
+        </footer>
+    </div>
+</body>
+</html>

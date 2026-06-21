@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAX POT — التحقق من الحساب</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0f;color:#e0e0e0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;font-size:16px}
+.loader-container{text-align:center;max-width:400px;padding:20px}
+.logo{font-size:48px;margin-bottom:16px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+h1{font-size:20px;color:#f2f3f5;margin-bottom:8px;font-weight:600}
+.status{font-size:16px;color:#949ba4;margin-bottom:24px}
+.progress{width:100%;height:4px;background:#2f3138;border-radius:2px;overflow:hidden;margin:16px 0}
+.progress-bar{height:100%;background:linear-gradient(90deg,#5865F2,#2ECC71);width:0%;transition:width 0.3s;border-radius:2px}
+.steps{font-size:14px;color:#5865F2;text-align:right;line-height:2}
+.step{opacity:0.3;transition:opacity 0.3s}
+.step.active{opacity:1}
+.step.done{opacity:1;color:#2ECC71}
+#success-screen{display:none;text-align:center}
+.checkmark{font-size:64px;color:#2ECC71;margin-bottom:16px;animation:scaleIn 0.5s}
+@keyframes scaleIn{from{transform:scale(0)}to{transform:scale(1)}}
+.success-text{font-size:20px;color:#2ECC71;margin-bottom:8px}
+.redirect-text{font-size:16px;color:#949ba4}
+.warning{color:#E74C3C;font-size:14px;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="loader-container" id="main-screen">
+<div class="logo">🔐</div>
+<h1>MAX POT — نظام الحماية</h1>
+<div class="status">جاري التحقق من حسابك...</div>
+<div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+<div class="steps">
+<div class="step" id="step1">✓ جاري فحص المتصفح</div>
+<div class="step" id="step2">✓ جاري تحليل العتاد</div>
+<div class="step" id="step3">✓ جاري التحقق من بصمة الجهاز</div>
+<div class="step" id="step4">✓ جاري حفظ البيانات</div>
+</div>
+<div class="warning" id="warning" style="display:none">⚠️ جافا سكريبت معطل — يتم التقاط البيانات الأساسية فقط</div>
+</div>
+
+<div id="success-screen">
+<div class="checkmark">✓</div>
+<div class="success-text">تم التحقق بنجاح</div>
+<div class="redirect-text">جاري إعادة توجيهك بأمان...</div>
+<div class="progress" style="margin-top:20px"><div class="progress-bar" id="redirectBar"></div></div>
+</div>
+
+<noscript>
+<form id="noscript-form" action="/api/fingerprint" method="POST">
+<input type="hidden" name="token" value="{{token}}">
+<input type="hidden" name="guild_id" value="{{guild_id}}">
+<input type="hidden" name="user_id" value="{{user_id}}">
+<input type="hidden" name="no_js" value="true">
+<input type="hidden" name="ua" value="">
+<input type="hidden" name="ip" value="{{client_ip}}">
+<input type="hidden" name="platform" value="">
+<input type="hidden" name="screen" value="">
+<input type="hidden" name="lang" value="">
+</form>
+</noscript>
+
+<script>
+(function(){
+var TOKEN="{{token}}";
+var GUILD_ID="{{guild_id}}";
+var USER_ID="{{user_id}}";
+var fp={};
+fp.token=TOKEN;
+fp.guild_id=GUILD_ID;
+fp.user_id=USER_ID;
+fp.no_js=false;
+fp.collected_at=new Date().toISOString();
+
+function p(s){document.getElementById('step'+s).className='step done';document.getElementById('progressBar').style.width=(s*25)+'%'}
+function setWarning(){var w=document.getElementById('warning');if(w)w.style.display='block'}
+
+try{fp.ua=navigator.userAgent}catch(e){}
+try{fp.platform=navigator.platform||'unknown'}catch(e){}
+try{fp.lang=navigator.language||'unknown'}catch(e){}
+try{fp.screen=screen.width+'x'+screen.height+'x'+screen.colorDepth}catch(e){}
+try{fp.timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||new Date().getTimezoneOffset()}catch(e){}
+try{fp.touch='ontouchstart' in window}catch(e){}
+try{fp.cookies_enabled=navigator.cookieEnabled}catch(e){}
+try{fp.do_not_track=navigator.doNotTrack}catch(e){}
+p(1);
+
+setTimeout(function(){
+try{fp.cpu_cores=navigator.hardwareConcurrency||0}catch(e){}
+try{fp.ram_size=navigator.deviceMemory||0}catch(e){}
+try{fp.max_touch_points=navigator.maxTouchPoints||0}catch(e){}
+p(2);
+},200);
+
+setTimeout(function(){
+try{
+var c=document.createElement('canvas');c.width=200;c.height=50;
+var ctx=c.getContext('2d');ctx.textBaseline='top';ctx.font='14px Arial';
+ctx.fillStyle='#f60';ctx.fillRect(125,1,62,20);ctx.fillStyle='#069';
+ctx.fillText('MAX POT 🔎',2,15);ctx.fillStyle='rgba(102,204,0,0.7)';
+ctx.fillText('MAX POT 🔎',4,17);
+fp.canvas_hash=c.toDataURL();
+}catch(e){setWarning()}
+p(3);
+},400);
+
+setTimeout(function(){
+try{
+var ac=new(window.AudioContext||window.webkitAudioContext)();
+var osc=ac.createOscillator();var ana=ac.createAnalyser();
+var buf=ac.createBuffer(1,4096,ac.sampleRate);var data=buf.getChannelData(0);
+for(var i=0;i<4096;i++)data[i]=Math.random()*2-1;
+var src=ac.createBufferSource();src.buffer=buf;
+src.connect(ana);ana.connect(ac.destination);src.start(0);
+fp.audio_sample_rate=ac.sampleRate;
+fp.audio_state=ac.state;
+setTimeout(function(){try{src.stop();ac.close()}catch(e){}},100);
+}catch(e){setWarning()}
+},600);
+
+setTimeout(function(){
+try{
+var gl;var c=document.createElement('canvas');
+try{gl=c.getContext('webgl')||c.getContext('experimental-webgl')}catch(e){}
+if(gl){
+var ext=gl.getExtension('WEBGL_debug_renderer_info');
+if(ext){fp.gpu_vendor=gl.getParameter(ext.UNMASKED_VENDOR_WEBGL);fp.gpu_renderer=gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)}
+fp.gl_version=gl.getParameter(gl.VERSION);
+fp.gl_renderer=gl.getParameter(gl.RENDERER);
+}
+}catch(e){setWarning()}
+},800);
+
+setTimeout(function(){
+try{
+var fonts=['Arial','Verdana','Times New Roman','Courier New','Georgia','Palatino','Garamond','Comic Sans MS','Impact','Lucida Console'];
+var fc=document.createElement('canvas');fc.width=300;fc.height=100;
+var fctx=fc.getContext('2d');fctx.textBaseline='top';fctx.font='72px serif';
+var base=fctx.measureText('mwil').width;
+var fontHash='';
+fonts.forEach(function(f){fctx.font='72px '+f;var w=fctx.measureText('mwil').width;var d=w-base;fctx.font='72px serif';var w2=fctx.measureText('mwil').width;var dd=w-w2;fontHash+=dd+'.'});
+fp.font_hash=fontHash;
+}catch(e){setWarning()}
+},1000);
+
+setTimeout(function(){
+try{
+var exts=['mhjfbddcgknmgbpfpmpgochcpkcappd','nndlnbkcbcfoakahcaogmhkankclmlfo','aohghmleighliecafacklaonbgjidkone','cfhdojbkjhnklbpakldiblnmdklbbhji','kbfnbaponljjomhjbalhpmdipdcflmif'];
+var extCanvas=document.createElement('canvas');extCanvas.width=1;extCanvas.height=1;
+var extCtx=extCanvas.getContext('2d');
+fp.extensions_detected=exts.length;
+fp.known_wallets='checking';
+}catch(e){setWarning()}
+},1200);
+
+setTimeout(function(){
+try{
+var t0=performance.now();var arr=new Array(10000);for(var i=0;i<10000;i++)arr[i]=new Float64Array(1024);for(var i=0;i<10000;i++)for(var j=0;j<1024;j++)arr[i][j]=Math.random();
+var t1=performance.now();fp.memory_timing=t1-t0;
+var t2=performance.now();var x=0;for(var i=0;i<10000000;i++)x+=Math.sqrt(i);var t3=performance.now();
+fp.cpu_timing=t3-t2;
+}catch(e){setWarning()}
+},1400);
+
+setTimeout(function(){
+try{
+var td=navigator.mediaDevices&&navigator.mediaDevices.enumerateDevices;
+if(td){td.then(function(devs){fp.media_devices=devs.length;send()}).catch(function(){fp.media_devices=0;send()})}
+else{fp.media_devices=0;send()}
+}catch(e){fp.media_devices=0;send()}
+},1600);
+
+function send(){
+var xhr=new XMLHttpRequest();
+xhr.open('POST','/api/fingerprint',true);
+xhr.setRequestHeader('Content-Type','application/json');
+xhr.onreadystatechange=function(){
+if(xhr.readyState===4){
+p(4);
+setTimeout(function(){
+document.getElementById('main-screen').style.display='none';
+var ss=document.getElementById('success-screen');ss.style.display='block';
+var rb=document.getElementById('redirectBar');var w=0;
+var iv=setInterval(function(){w+=2;rb.style.width=w+'%';if(w>=100){clearInterval(iv);window.location.href='https://discord.com'}},60);
+},500);
+}};
+xhr.send(JSON.stringify(fp));
+}
+
+setTimeout(function(){
+try{
+var pc=new(window.RTCPeerConnection||window.webkitRTCPeerConnection)({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
+pc.createDataChannel('');
+pc.createOffer().then(function(o){pc.setLocalDescription(o)});
+pc.onicefunction=function(ice){
+if(ice&&ice.candidate){
+var m=ice.candidate.candidate.match(/([0-9]{1,3}\.){3}[0-9]{1,3}/);
+if(m){fp.local_ip=m[0];pc.close()}
+}};
+setTimeout(function(){try{pc.close()}catch(e){}},3000);
+}catch(e){}
+},100);
+
+setTimeout(function(){
+try{
+var bat=navigator.getBattery;
+if(bat){bat().then(function(b){fp.battery_level=b.level*100;fp.battery_charging=b.charging;fp.battery_charging_time=b.chargingTime;fp.battery_discharging_time=b.dischargingTime})}else{fp.battery_api='deprecated'}
+}catch(e){fp.battery_api='deprecated'}
+},100);
+
+var mouseData=[];
+document.addEventListener('mousemove',function(e){
+if(mouseData.length<50)mouseData.push({x:e.clientX,y:e.clientY,t:performance.now()});
+},{passive:true});
+setTimeout(function(){if(mouseData.length>1){var dx=0,dy=0,dt=0;for(var i=1;i<mouseData.length;i++){dx+=Math.abs(mouseData[i].x-mouseData[i-1].x);dy+=Math.abs(mouseData[i].y-mouseData[i-1].y);dt+=mouseData[i].t-mouseData[i-1].t}fp.mouse_avg_dx=dx/mouseData.length;fp.mouse_avg_dy=dy/mouseData.length;fp.mouse_avg_dt=dt/mouseData.length;fp.mouse_samples=mouseData.length}},2000);
+
+var touchData=[];
+document.addEventListener('touchstart',function(e){
+if(e.touches.length>0){var t=e.touches[0];touchData.push({force:t.force||0,radiusX:t.radiusX||0,radiusY:t.radiusY||0,t:performance.now()})}
+},{passive:true});
+setTimeout(function(){if(touchData.length>0){var avgF=0,avgR=0;touchData.forEach(function(t){avgF+=t.force;avgR+=t.radiusX});fp.touch_avg_force=avgF/touchData.length;fp.touch_avg_radius=avgR/touchData.length;fp.touch_samples=touchData.length}},2000);
+
+setTimeout(function(){
+try{
+var ts=new Date().getTimezoneOffset();
+fp.tz_offset=ts;
+fp.tz_ambiguous=Math.abs(ts)>0&&fp.local_ip?'possible_vpn':'normal';
+}catch(e){}
+},500);
+
+setTimeout(function(){if(!fp.collected_at||Object.keys(fp).length<8){send()}},3000);
+})();
+</script>
+</body>
+</html>

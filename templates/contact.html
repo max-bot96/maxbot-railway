@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAX BOT - تواصل معنا</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',sans-serif}
+        body{background:#0f172a;color:#f8fafc;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+        .contact-box{background:rgba(30,41,59,0.95);padding:50px 40px;border-radius:24px;max-width:500px;width:100%;box-shadow:0 25px 80px rgba(99,102,241,0.3);border:1px solid rgba(255,255,255,0.1);text-align:center}
+        .logo{margin-bottom:25px}
+        .logo i{font-size:50px;background:linear-gradient(135deg,#6366f1,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .logo h1{font-size:26px;font-weight:800;margin-top:8px;background:linear-gradient(135deg,#f8fafc,#94a3b8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .logo p{color:#64748b;font-size:13px;margin-top:3px}
+        .form-group{margin-bottom:15px;text-align:right}
+        .form-group label{display:block;color:#94a3b8;font-size:13px;margin-bottom:6px;font-weight:600}
+        .form-group input,.form-group textarea{width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;background:#0f172a;color:#f8fafc;font-size:14px;transition:.3s;font-family:'Cairo',sans-serif}
+        .form-group input:focus,.form-group textarea:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,0.2)}
+        .form-group textarea{height:120px;resize:vertical}
+        .btn-submit{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:16px;font-weight:600;cursor:pointer;transition:.3s;display:flex;align-items:center;justify-content:center;gap:10px}
+        .btn-submit:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(99,102,241,0.4)}
+        .btn-submit:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+        .result{margin-top:15px;padding:12px;border-radius:10px;font-size:14px;display:none}
+        .result.ok{display:block;background:rgba(16,185,129,0.2);color:#10b981}
+        .result.err{display:block;background:rgba(239,68,68,0.2);color:#ef4444}
+        .btn-back{display:block;margin-top:15px;color:#64748b;font-size:13px;text-decoration:none;transition:.2s}
+        .btn-back:hover{color:#6366f1}
+        .footer-links{margin-top:20px;padding-top:15px;border-top:1px solid rgba(255,255,255,0.1)}
+        .footer-links a{color:#64748b;font-size:12px;text-decoration:none;margin:0 8px}
+        .footer-links a:hover{color:#6366f1}
+    </style>
+</head>
+<body>
+<div class="contact-box">
+    <div class="logo">
+        <i class="fas fa-envelope-open-text"></i>
+        <h1>تواصل معنا</h1>
+        <p>أرسل لنا رسالة وسنرد عليك في أقرب وقت</p>
+    </div>
+
+    <form id="contact-form">
+        <div class="form-group">
+            <label><i class="fas fa-user"></i> الاسم</label>
+            <input type="text" id="c-name" placeholder="اسمك" required>
+        </div>
+        <div class="form-group">
+            <label><i class="fas fa-envelope"></i> الإيميل</label>
+            <input type="email" id="c-email" placeholder="example@email.com" required>
+        </div>
+        <div class="form-group">
+            <label><i class="fas fa-comment-dots"></i> الرسالة</label>
+            <textarea id="c-message" placeholder="اكتب رسالتك هنا..." required></textarea>
+        </div>
+        <button type="submit" class="btn-submit" id="submit-btn">
+            <i class="fas fa-paper-plane"></i> إرسال الرسالة
+        </button>
+    </form>
+
+    <div class="result" id="result"></div>
+
+    <a href="/" class="btn-back"><i class="fas fa-arrow-right"></i> العودة</a>
+
+    <div class="footer-links">
+        <a href="/support"><i class="fas fa-headset"></i> الدعم الفني</a>
+        <a href="/commands"><i class="fas fa-terminal"></i> الأوامر</a>
+        <a href="/terms">شروط الخدمة</a>
+    </div>
+</div>
+
+<script>
+document.getElementById('contact-form').addEventListener('submit', async function(e){
+    e.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    const res = document.getElementById('result');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
+    try {
+        const r = await fetch('/api/contact', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                name: document.getElementById('c-name').value,
+                email: document.getElementById('c-email').value,
+                message: document.getElementById('c-message').value
+            })
+        });
+        const d = await r.json();
+        if(d.ok){
+            res.className = 'result ok';
+            res.innerHTML = '<i class="fas fa-check-circle"></i> ' + d.message;
+            document.getElementById('contact-form').reset();
+        } else {
+            res.className = 'result err';
+            res.innerHTML = '<i class="fas fa-times-circle"></i> ' + (d.error || 'خطأ غير معروف');
+        }
+    } catch(e){
+        res.className = 'result err';
+        res.innerHTML = '<i class="fas fa-times-circle"></i> خطأ في الاتصال';
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> إرسال الرسالة';
+});
+</script>
+</body>
+</html>
