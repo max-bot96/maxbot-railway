@@ -603,13 +603,70 @@ def callback():
 
             return redirect(url_for("dashboard"))
         else:
-            captcha_q, _, captcha_token_new = generate_captcha()
-            total_commands = len(COMMANDS)
-            return render_template("login.html",
-                error="هذا الحساب ليس مالك البوت",
-                oauth_enabled=OAUTH_ENABLED, redirect_uri=redirect_uri,
-                captcha_question=captcha_q, captcha_token=captcha_token_new,
-                show_captcha=True, total_commands=total_commands)
+            reset_brute_force(ip)
+            session.permanent = True
+            session["owner"] = False
+            session["user_id"] = user_id
+            session["username"] = user_data.get("username", "")
+            avatar_hash = user_data.get("avatar")
+            session["avatar"] = f"https://cdn.discordapp.com/avatars/{user_id}/{avatar_hash}.png" if avatar_hash else ""
+            session["login_ip"] = ip
+            session["login_time"] = datetime.now().isoformat()
+
+            login_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            login_time_en = datetime.now().strftime("%I:%M %p")
+            ua = (request.headers.get("User-Agent", "") or "")[:200]
+            site_url = get_base_url() or request.host_url.rstrip("/")
+
+            browser = "مجهول"
+            if "Chrome" in ua and "Edg" not in ua: browser = "Google Chrome"
+            elif "Edg" in ua: browser = "Microsoft Edge"
+            elif "Firefox" in ua: browser = "Mozilla Firefox"
+            elif "Safari" in ua and "Chrome" not in ua: browser = "Safari"
+            elif "Opera" in ua or "OPR" in ua: browser = "Opera"
+
+            os_name = "مجهول"
+            if "Windows NT 10" in ua: os_name = "Windows 10/11"
+            elif "Windows NT 6.3" in ua: os_name = "Windows 8.1"
+            elif "Windows NT 6.1" in ua: os_name = "Windows 7"
+            elif "Linux" in ua and "Android" not in ua: os_name = "Linux"
+            elif "Mac OS X" in ua: os_name = "macOS"
+            elif "Android" in ua: os_name = "Android"
+            elif "iPhone" in ua or "iPad" in ua: os_name = "iOS"
+
+            device = "مجهول"
+            if "Mobile" in ua or "Android" in ua: device = "📱 موبايل"
+            elif "Tablet" in ua or "iPad" in ua: device = "📱 تابلت"
+            else: device = "💻 كمبيوتر"
+
+            msg = (
+                f"```\n"
+                f"╔══════════════════════════════════════╗\n"
+                f"║     🔐 تنبيه: دخول مستخدم جديد     ║\n"
+                f"╚══════════════════════════════════════╝\n"
+                f"```\n\n"
+                f"**👤 حساب المستخدم**\n"
+                f"├─ الاسم: **{user_data.get('username', 'غير معروف')}**\n"
+                f"├─ المعرّف: `{user_id}`\n"
+                f"└─ الأفاتار: [عرض](https://cdn.discordapp.com/avatars/{user_id}/{user_data.get('avatar', '')}.png)\n\n"
+                f"**🕐 تفاصيل الجلسة**\n"
+                f"├─ التاريخ: `{login_time}`\n"
+                f"└─ الوقت: `{login_time_en}`\n\n"
+                f"**🌐 بيانات الشبكة**\n"
+                f"├─ عنوان IP: `{ip}`\n"
+                f"├─ الموقع: [Google Maps](https://www.google.com/maps?q={ip})\n"
+                f"└─ مزود الخدمة: [OVH Cloud](https://ipinfo.io/{ip})\n\n"
+                f"**📱 مواصفات الجهاز**\n"
+                f"├─ النوع: {device}\n"
+                f"├─ المتصفّح: {browser}\n"
+                f"└─ نظام التشغيل: {os_name}\n\n"
+                f"**🔗 رابط الموقع**\n"
+                f"└─ [{site_url}]({site_url})\n\n"
+                f"```"
+            )
+            send_discord_dm(OWNER_ID, msg)
+
+            return redirect(url_for("dashboard"))
     except Exception:
         captcha_q, _, captcha_token_new = generate_captcha()
         total_commands = len(COMMANDS)
@@ -626,7 +683,7 @@ def logout():
 
 @app.route("/dashboard")
 def dashboard():
-    if not session.get("owner"):
+    if not session.get("user_id"):
         return redirect(url_for("login"))
     current_ip = get_real_ip()
     if session.get("login_ip") and session["login_ip"] != current_ip:
