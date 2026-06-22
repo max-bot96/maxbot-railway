@@ -31,6 +31,7 @@ DEFAULT_LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID"))
 TICKET_CATEGORY_ID = int(os.getenv("TICKET_CATEGORY_ID"))
 ADMIN_ROLE_ID = int(os.getenv("ADMIN_ROLE_ID"))
 YOUR_USER_ID = int(os.getenv("YOUR_USER_ID"))
+OWNER_ID = YOUR_USER_ID
 EXEMPT_ROLE_IDS = [int(x) for x in os.getenv("EXEMPT_ROLE_IDS", "").split(",") if x.strip()]
 AUTO_ROLE_ID = int(os.getenv("AUTO_ROLE_ID", "0"))
 TICKET_ROLE_ID = int(os.getenv("TICKET_ROLE_ID", "0"))
@@ -8131,7 +8132,7 @@ async def رابط(ctx):
 @bot.hybrid_command(name="visitors", aliases=['الزوار', 'حضور', 'زوار'])
 async def الزوار(ctx):
     """!الزوار - عرض زوار الموقع الإلكتروني"""
-    if str(ctx.author.id) != OWNER_ID:
+    if str(ctx.author.id) != str(YOUR_USER_ID):
         return await ctx.send("❌ هذا الأمر للمالك فقط!")
     
     site_url = get_base_url()
