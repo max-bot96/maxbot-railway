@@ -538,34 +538,60 @@ def callback():
             session["login_time"] = datetime.now().isoformat()
 
             login_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            ua = (request.headers.get("User-Agent", "") or "")[:100]
+            login_time_en = datetime.now().strftime("%I:%M %p")
+            ua = (request.headers.get("User-Agent", "") or "")[:200]
             site_url = get_base_url() or request.host_url.rstrip("/")
             
             browser = "مجهول"
-            if "Chrome" in ua: browser = "Chrome"
-            elif "Firefox" in ua: browser = "Firefox"
-            elif "Safari" in ua: browser = "Safari"
-            elif "Edge" in ua: browser = "Edge"
+            if "Chrome" in ua and "Edg" not in ua: browser = "Google Chrome"
+            elif "Edg" in ua: browser = "Microsoft Edge"
+            elif "Firefox" in ua: browser = "Mozilla Firefox"
+            elif "Safari" in ua and "Chrome" not in ua: browser = "Safari"
+            elif "Opera" in ua or "OPR" in ua: browser = "Opera"
             
             os_name = "مجهول"
-            if "Windows" in os_name: os_name = "Windows"
-            elif "Linux" in ua: os_name = "Linux"
-            elif "Mac" in ua: os_name = "Mac"
+            if "Windows NT 10" in ua: os_name = "Windows 10/11"
+            elif "Windows NT 6.3" in ua: os_name = "Windows 8.1"
+            elif "Windows NT 6.1" in ua: os_name = "Windows 7"
+            elif "Linux" in ua and "Android" not in ua: os_name = "Linux"
+            elif "Mac OS X" in ua: os_name = "macOS"
             elif "Android" in ua: os_name = "Android"
-            elif "iPhone" in ua: os_name = "iPhone"
+            elif "iPhone" in ua or "iPad" in ua: os_name = "iOS"
+            
+            device = "مجهول"
+            if "Mobile" in ua or "Android" in ua: device = "📱 موبايل"
+            elif "Tablet" in ua or "iPad" in ua: device = "📱 تابلت"
+            else: device = "💻 كمبيوتر"
             
             msg = (
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"🔐 **تنبيه أمني: تسجيل دخول جديد**\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                f"👤 **المستخدم:** {user_data.get('username', 'غير معروف')}\n"
-                f"🆔 **User ID:** `{user_id}`\n"
-                f"🕐 **الوقت:** {login_time}\n"
-                f"🌐 **الـ IP:** `{ip}`\n"
-                f"📍 **الموقع:** [Google Maps](https://www.google.com/maps?q={ip})\n"
-                f"📱 **الجهاز:** {browser} | {os_name}\n"
-                f"🔗 **الرابط:** [{site_url}]({site_url})\n\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                f"```\n"
+                f"╔══════════════════════════════════════╗\n"
+                f"║     🔐 تنبيه أمني: تسجيل دخول       ║\n"
+                f"╚══════════════════════════════════════╝\n"
+                f"```\n\n"
+                f"**👤 حساب المستخدم**\n"
+                f"├─ الاسم: **{user_data.get('username', 'غير معروف')}**\n"
+                f"├─ المعرّف: `{user_id}`\n"
+                f"└─ الأفاتار: [عرض](https://cdn.discordapp.com/avatars/{user_id}/{user_data.get('avatar', '')}.png)\n\n"
+                f"**🕐 تفاصيل الجلسة**\n"
+                f"├─ التاريخ: `{login_time}`\n"
+                f"└─ الوقت: `{login_time_en}`\n\n"
+                f"**🌐 بيانات الشبكة**\n"
+                f"├─ عنوان IP: `{ip}`\n"
+                f"├─ الموقع: [Google Maps](https://www.google.com/maps?q={ip})\n"
+                f"└─ مزود الخدمة: [OVH Cloud](https://ipinfo.io/{ip})\n\n"
+                f"**📱 مواصفات الجهاز**\n"
+                f"├─ النوع: {device}\n"
+                f"├─ المتصفّح: {browser}\n"
+                f"└─ نظام التشغيل: {os_name}\n\n"
+                f"**🔗 رابط الموقع**\n"
+                f"└─ [{site_url}]({site_url})\n\n"
+                f"```\n"
+                f"╔══════════════════════════════════════╗\n"
+                f"║  ⚠️ إذا لم تكن أنت، غيّر كلمة      ║\n"
+                f"║  المرور فوراً واتصل بالدعم الفني   ║\n"
+                f"╚══════════════════════════════════════╝\n"
+                f"```"
             )
             send_discord_dm(OWNER_ID, msg)
 
