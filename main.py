@@ -48,6 +48,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TUNNEL_URL_FILE = os.path.join(BASE_DIR, "server_url2.txt")
 
 def get_base_url():
+    env_url = os.getenv("SITE_URL", "").strip()
+    if env_url:
+        return env_url
     try:
         with open(TUNNEL_URL_FILE, "r", encoding="utf-8-sig") as f:
             raw = f.read().strip().splitlines()
@@ -8130,51 +8133,65 @@ async def رابط(ctx):
     await ctx.send(embed=embed)
 
 @bot.hybrid_command(name="visitors", aliases=['الزوار', 'حضور', 'زوار'])
-async def الزوار(ctx):
-    """!الزوار - عرض زوار الموقع الإلكتروني"""
+async def الزوار(ctx, user_id: str = None):
+    """!حضور - عرض زوار الموقع | !حضور @user لتحديد شخص"""
     if str(ctx.author.id) != str(YOUR_USER_ID):
         return await ctx.send("❌ هذا الأمر للمالك فقط!")
     
+    visitors_file = os.path.join(BASE_DIR, "visitors.json")
     site_url = get_base_url()
-    if not site_url:
-        return await ctx.send("❌ الموقع غير متاح حالياً")
     
+    data = []
     try:
-        r = http_requests.get(f"{site_url}/api/visitors", timeout=10)
-        data = r.json()
-        visitors = data.get("visitors", [])
-        total = data.get("total", 0)
+        with open(visitors_file, "r", encoding="utf-8") as f:
+            data = json.load(f).get("visitors", [])
     except:
-        return await ctx.send("❌ فشل الاتصال بالموقع")
+        pass
+    
+    if not data and site_url:
+        try:
+            r = http_requests.get(f"{site_url}/api/visitors", timeout=10)
+            data = r.json().get("visitors", [])
+        except:
+            pass
+    
+    if user_id:
+        uid = user_id.strip().replace("<@", "").replace(">", "").replace("!", "")
+        data = [v for v in data if str(v.get("user_id", "")) == uid]
+        title = f"🔍 زائر: {uid}"
+    else:
+        title = "👥 زوار الموقع الإلكتروني"
+        data = data[:15]
     
     embed = discord.Embed(
-        title="═══════════════════════════\n👥 زوار الموقع الإلكتروني\n═══════════════════════════",
+        title=f"═══════════════════════════\n{title}\n═══════════════════════════",
         color=0x9B59B6,
         timestamp=datetime.now(timezone.utc)
     )
     
-    embed.add_field(name="📊 إجمالي الزوار", value=f"**{total}** زائر", inline=True)
-    embed.add_field(name="🔗 الرابط", value=f"[اضغط هنا]({site_url})", inline=True)
+    embed.add_field(name="📊 إجمالي الزوار", value=f"**{len(data)}** زائر", inline=True)
+    if site_url:
+        embed.add_field(name="🔗 الرابط", value=f"[اضغط هنا]({site_url})", inline=True)
     
-    if visitors:
-        recent = visitors[:10]
+    if data:
         lines = []
-        for i, v in enumerate(recent, 1):
+        for i, v in enumerate(data, 1):
             username = v.get("username", "مجهول") or "مجهول"
+            uid = v.get("user_id", "?")
             ip = v.get("ip", "?")[:15]
             page = v.get("page", "?")
             time_str = v.get("time", "?")[-8:]
-            lines.append(f"`{i}.` **{username}** | `{ip}` | {page} | {time_str}")
+            lines.append(f"`{i}.` **{username}** (`{uid}`) | `{ip}` | {page} | {time_str}")
         
         embed.add_field(
-            name="🕐 آخر 10 زوار",
+            name="🕐 آخر الزوار",
             value="\n".join(lines),
             inline=False
         )
     else:
         embed.add_field(name="🕐 آخر الزوار", value="لا يوجد زوار بعد", inline=False)
     
-    embed.set_footer(text="═══════════════════════════\nMAX BOT • زوار الموقع\n═══════════════════════════")
+    embed.set_footer(text="═══════════════════════════\nMAX BOT • زوار الموقع\n═══════════════════════════\n💡 استخدم !حضور @user لتحديد شخص")
     await ctx.send(embed=embed)
 
 @bot.hybrid_command(name="status", aliases=['جودة', 'حالة_البوت', 'quality'])
