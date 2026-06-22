@@ -137,6 +137,12 @@ _brute_force_store = defaultdict(lambda: {"count": 0, "locked_until": None})
 _CAPTCHA_SECRET = os.getenv("CAPTCHA_SECRET", secrets.token_hex(32))
 
 def get_base_url():
+    env_url = os.getenv("SITE_URL", "").strip()
+    if env_url:
+        return env_url
+    domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
+    if domain:
+        return f"https://{domain}"
     try:
         with open(TUNNEL_URL_FILE, "r", encoding="utf-8-sig") as f:
             raw = f.read().strip().splitlines()
