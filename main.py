@@ -8133,8 +8133,8 @@ async def رابط(ctx):
     await ctx.send(embed=embed)
 
 @bot.hybrid_command(name="visitors", aliases=['الزوار', 'حضور', 'زوار'])
-async def الزوار(ctx, user_id: str = None):
-    """!حضور - عرض زوار الموقع | !حضور @user لتحديد شخص"""
+async def الزوار(ctx, *, query: str = None):
+    """!حضور | !حضور 51.211.66.75 | !حضور @user"""
     if str(ctx.author.id) != str(YOUR_USER_ID):
         return await ctx.send("❌ هذا الأمر للمالك فقط!")
     
@@ -8155,12 +8155,25 @@ async def الزوار(ctx, user_id: str = None):
         except:
             pass
     
-    if user_id:
-        uid = user_id.strip().replace("<@", "").replace(">", "").replace("!", "")
-        data = [v for v in data if str(v.get("user_id", "")) == uid]
-        title = f"🔍 زائر: {uid}"
+    title = "👥 زوار الموقع الإلكتروني"
+    if query:
+        q = query.strip()
+        import re as _re
+        ip_pattern = _re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$')
+        if ip_pattern.match(q):
+            data = [v for v in data if q in str(v.get("ip", ""))]
+            title = f"🔍 بحث بالـ IP: {q}"
+        elif q.startswith("<@") or q.startswith("<!"):
+            uid = q.replace("<@", "").replace("<!", "").replace(">", "")
+            data = [v for v in data if str(v.get("user_id", "")) == uid]
+            title = f"🔍 زائر: {uid}"
+        elif q.isdigit():
+            data = [v for v in data if str(v.get("user_id", "")) == q]
+            title = f"🔍 زائر: {q}"
+        else:
+            data = [v for v in data if q.lower() in str(v.get("username", "")).lower()]
+            title = f"🔍 بحث: {q}"
     else:
-        title = "👥 زوار الموقع الإلكتروني"
         data = data[:15]
     
     embed = discord.Embed(
@@ -8169,13 +8182,13 @@ async def الزوار(ctx, user_id: str = None):
         timestamp=datetime.now(timezone.utc)
     )
     
-    embed.add_field(name="📊 إجمالي الزوار", value=f"**{len(data)}** زائر", inline=True)
+    embed.add_field(name="📊 النتائج", value=f"**{len(data)}** زائر", inline=True)
     if site_url:
         embed.add_field(name="🔗 الرابط", value=f"[اضغط هنا]({site_url})", inline=True)
     
     if data:
         lines = []
-        for i, v in enumerate(data, 1):
+        for i, v in enumerate(data[-15:], 1):
             username = v.get("username", "مجهول") or "مجهول"
             uid = v.get("user_id", "?")
             ip = v.get("ip", "?")[:15]
@@ -8184,14 +8197,14 @@ async def الزوار(ctx, user_id: str = None):
             lines.append(f"`{i}.` **{username}** (`{uid}`) | `{ip}` | {page} | {time_str}")
         
         embed.add_field(
-            name="🕐 آخر الزوار",
+            name="🕐 النتائج",
             value="\n".join(lines),
             inline=False
         )
     else:
-        embed.add_field(name="🕐 آخر الزوار", value="لا يوجد زوار بعد", inline=False)
+        embed.add_field(name="🕐 النتائج", value="لا توجد نتائج", inline=False)
     
-    embed.set_footer(text="═══════════════════════════\nMAX BOT • زوار الموقع\n═══════════════════════════\n💡 استخدم !حضور @user لتحديد شخص")
+    embed.set_footer(text="═══════════════════════════\nMAX BOT • زوار الموقع\n═══════════════════════════\n💡 !حضور IP | !حضور @user | !حضور username")
     await ctx.send(embed=embed)
 
 @bot.hybrid_command(name="status", aliases=['جودة', 'حالة_البوت', 'quality'])
