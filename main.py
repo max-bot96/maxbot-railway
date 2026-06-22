@@ -4909,6 +4909,102 @@ async def ping(ctx):
     embed.add_field(name="سرعة الاستجابة", value=f"{latency}ms")
     await ctx.send(embed=embed)
 
+@bot.hybrid_command(name="أوامر", aliases=['اوامر', 'cmds', 'commands', 'orders'], description="عرض جميع أوامر البوت")
+async def اوامر_cmd(ctx):
+    """!أوامر - عرض جميع الأوامر"""
+    try:
+        with open("commands_data.json", "r", encoding="utf-8") as f:
+            all_cmds = json.load(f)
+    except:
+        return await ctx.send("❌ فشل تحميل الأوامر")
+    
+    seen = set()
+    cats = {}
+    for c in all_cmds:
+        name = c.get("name", "")
+        cat = c.get("category", "غير محدد")
+        if name in seen:
+            continue
+        seen.add(name)
+        if cat not in cats:
+            cats[cat] = []
+        cats[cat].append(f"`!{name}`")
+    
+    cat_icons = {
+        "ادارة": "⚙️", "ادوات": "🔧", "العاب": "🎮", "معلومات": "ℹ️",
+        "موسيقى": "🎵", "اقتصاد": "💰", "مستويات": "📊", "صوت": "🔊",
+        "التقنية": "💻", "غير محدد": "📋"
+    }
+    
+    class CmdsView(discord.ui.View):
+        def __init__(self):
+            super().__init__(timeout=120)
+            self.page = 0
+            self.cat_list = list(cats.keys())
+        
+        def get_page_embed(self):
+            cat = self.cat_list[self.page]
+            cmds = cats[cat]
+            icon = cat_icons.get(cat, "📋")
+            
+            lines = []
+            for i in range(0, len(cmds), 10):
+                chunk = cmds[i:i+10]
+                lines.append(" ".join(chunk))
+            
+            embed = discord.Embed(
+                title=f"{icon} {cat} ({len(cmds)} أمر)",
+                description="\n".join(lines),
+                color=0x9B59B6
+            )
+            embed.set_footer(text=f"صفحة {self.page+1}/{len(self.cat_list)} | إجمالي: {len(seen)} أمر")
+            return embed
+        
+        @discord.ui.button(label="◀️ السابق", style=discord.ButtonStyle.secondary)
+        async def prev(self, interaction, button):
+            self.page = (self.page - 1) % len(self.cat_list)
+            await interaction.response.edit_message(embed=self.get_page_embed(), view=self)
+        
+        @discord.ui.button(label="▶️ التالي", style=discord.ButtonStyle.secondary)
+        async def next(self, interaction, button):
+            self.page = (self.page + 1) % len(self.cat_list)
+            await interaction.response.edit_message(embed=self.get_page_embed(), view=self)
+        
+        @discord.ui.button(label="🏠 القائمة", style=discord.ButtonStyle.primary)
+        async def home(self, interaction, button):
+            embed = discord.Embed(
+                title="📋 جميع أوامر البوت",
+                color=0x9B59B6
+            )
+            total = 0
+            for cat in self.cat_list:
+                icon = cat_icons.get(cat, "📋")
+                count = len(cats[cat])
+                total += count
+                embed.add_field(name=f"{icon} {cat}", value=f"{count} أمر", inline=True)
+            embed.set_footer(text=f"إجمالي: {total} أمر | اضغط على السهم للتصفح")
+            await interaction.response.edit_message(embed=embed, view=self)
+        
+        async def on_timeout(self):
+            for item in self.children:
+                item.disabled = True
+    
+    view = CmdsView()
+    
+    embed = discord.Embed(
+        title="📋 جميع أوامر البوت",
+        color=0x9B59B6
+    )
+    total = 0
+    for cat in cats:
+        icon = cat_icons.get(cat, "📋")
+        count = len(cats[cat])
+        total += count
+        embed.add_field(name=f"{icon} {cat}", value=f"{count} أمر", inline=True)
+    embed.set_footer(text=f"إجمالي: {total} أمر | اضغط على السهم للتصفح")
+    
+    await ctx.send(embed=embed, view=view)
+
 # ════════════════════════════════════════
 # أوامر غريبة وحصرية 🔥
 # ════════════════════════════════════════
