@@ -507,12 +507,33 @@ def callback():
 
             login_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             ua = (request.headers.get("User-Agent", "") or "")[:100]
+            site_url = get_base_url() or request.host_url.rstrip("/")
+            
+            browser = "مجهول"
+            if "Chrome" in ua: browser = "Chrome"
+            elif "Firefox" in ua: browser = "Firefox"
+            elif "Safari" in ua: browser = "Safari"
+            elif "Edge" in ua: browser = "Edge"
+            
+            os_name = "مجهول"
+            if "Windows" in os_name: os_name = "Windows"
+            elif "Linux" in ua: os_name = "Linux"
+            elif "Mac" in ua: os_name = "Mac"
+            elif "Android" in ua: os_name = "Android"
+            elif "iPhone" in ua: os_name = "iPhone"
+            
             msg = (
-                f"🔐 **تسجيل دخول جديد إلى لوحة التحكم**\n"
-                f"🕐 {login_time}\n"
-                f"🌐 IP: [{ip}](https://whatismyipaddress.com/ip/{ip})\n"
-                f"📱 الجهاز: {html.escape(ua)}\n"
-                f"🔗 الرابط: {get_base_url() or 'مباشر'}"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"🔐 **تنبيه أمني: تسجيل دخول جديد**\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"👤 **المستخدم:** {user_data.get('username', 'غير معروف')}\n"
+                f"🆔 **User ID:** `{user_id}`\n"
+                f"🕐 **الوقت:** {login_time}\n"
+                f"🌐 **الـ IP:** `{ip}`\n"
+                f"📍 **الموقع:** [Google Maps](https://www.google.com/maps?q={ip})\n"
+                f"📱 **الجهاز:** {browser} | {os_name}\n"
+                f"🔗 **الرابط:** [{site_url}]({site_url})\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━"
             )
             send_discord_dm(OWNER_ID, msg)
 
