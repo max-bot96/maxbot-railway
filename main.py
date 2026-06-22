@@ -555,7 +555,7 @@ async def on_command_error(ctx, error):
         print(f"CMD ERROR: {type(error).__name__}: {error}")
 
         if isinstance(error, commands.CommandNotFound):
-            _dash_url = "https://bare-experts-astronomy-hospitality.trycloudflare.com"
+            _dash_url = "https://web-production-f6fb8.up.railway.app"
             try:
                 with open(os.path.join(BASE_DIR, "server_url2.txt"), "r", encoding="utf-8-sig") as _f:
                     _dash_url = _f.read().strip().splitlines()[0]
@@ -587,7 +587,7 @@ async def on_command_error(ctx, error):
             return
 
         if isinstance(error, commands.MissingRequiredArgument):
-            _dash_url = "https://bare-experts-astronomy-hospitality.trycloudflare.com"
+            _dash_url = "https://web-production-f6fb8.up.railway.app"
             try:
                 with open(os.path.join(BASE_DIR, "server_url2.txt"), "r", encoding="utf-8-sig") as _f:
                     _dash_url = _f.read().strip().splitlines()[0]
@@ -628,7 +628,7 @@ async def on_command_error(ctx, error):
             return
 
         if isinstance(error, commands.BadArgument):
-            _dash_url = "https://bare-experts-astronomy-hospitality.trycloudflare.com"
+            _dash_url = "https://web-production-f6fb8.up.railway.app"
             try:
                 with open(os.path.join(BASE_DIR, "server_url2.txt"), "r", encoding="utf-8-sig") as _f:
                     _dash_url = _f.read().strip().splitlines()[0]
