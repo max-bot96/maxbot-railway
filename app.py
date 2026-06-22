@@ -925,7 +925,7 @@ def api_bot_status():
 
 @app.route("/api/command-logs")
 def api_command_logs():
-    if not session.get("owner"):
+    if not session.get("user_id"):
         return jsonify({"ok": False, "error": "غير مصرح"}), 403
     CMD_LOGS_FILE = "command_logs.json"
     if not os.path.exists(CMD_LOGS_FILE):
