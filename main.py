@@ -9959,6 +9959,11 @@ def double_check_availability(username, platform):
     """Second check with cloudscraper + different browser fingerprint"""
     try:
         if platform == "discord":
+            username_lower = username.lower()
+            for guild in bot.guilds:
+                member = guild.get_member_named(username_lower)
+                if member:
+                    return False
             return True
         elif platform == "tiktok":
             url = f"https://www.tiktok.com/@{username}"
@@ -10139,25 +10144,20 @@ async def username_hunter_task():
     username_hunter_data["stats"]["per_platform"].setdefault(current_platform, {"checked": 0, "found": 0})
     username_hunter_data["stats"]["per_platform"][current_platform]["checked"] += 1
 
+    checked_guilds_count = len(bot.guilds)
+
     if current_platform == "discord":
         username_clean = username.lower().strip()
         url = f"https://discord.com/users/{username_clean}"
-        _checks = []
-        for guild in bot.guilds[:3]:
-            async def _check(g=guild, u=username_clean):
-                try:
-                    results = await asyncio.wait_for(
-                        g.query_members(query=u, limit=5), timeout=3
-                    )
-                    for m in results:
-                        if m.name.lower() == u:
-                            return True
-                except Exception:
-                    pass
-                return False
-            _checks.append(_check())
-        _results = await asyncio.gather(*_checks)
-        is_available = not any(_results)
+        found_taken = False
+        checked_guilds_count = 0
+        for guild in bot.guilds:
+            member = guild.get_member_named(username_clean)
+            if member:
+                found_taken = True
+                break
+            checked_guilds_count += 1
+        is_available = not found_taken
         p_url = url
     else:
         smart_delay = random.uniform(1.0, 4.0)
@@ -10181,7 +10181,7 @@ async def username_hunter_task():
 
         disclaimer = ""
         if current_platform == "discord":
-            disclaimer = "\n⚠️ **تنبيه:** فحص Discord تقريبي — تأكد من الإتاحة يدوياً قبل الحجز"
+            disclaimer = f"\n✅ **تم التحقق من {checked_guilds_count} سيرفر**"
 
         embed = discord.Embed(
             title=f"{emoji} يوزر {label} متاح على {p_name}!",
