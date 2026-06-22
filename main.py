@@ -8135,9 +8135,6 @@ async def رابط(ctx):
 @bot.hybrid_command(name="visitors", aliases=['الزوار', 'حضور', 'زوار'])
 async def الزوار(ctx, *, query: str = None):
     """!حضور | !حضور 51.211.66.75 | !حضور @user"""
-    if str(ctx.author.id) != str(YOUR_USER_ID):
-        return await ctx.send("❌ هذا الأمر للمالك فقط!")
-    
     visitors_file = os.path.join(BASE_DIR, "visitors.json")
     site_url = get_base_url()
     
