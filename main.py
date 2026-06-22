@@ -8128,6 +8128,54 @@ async def رابط(ctx):
     embed.set_footer(text="═══════════════════════════\nMAX BOT • الروابط الرسمية\n═══════════════════════════")
     await ctx.send(embed=embed)
 
+@bot.hybrid_command(name="visitors", aliases=['الزوار', 'حضور', 'زوار'])
+async def الزوار(ctx):
+    """!الزوار - عرض زوار الموقع الإلكتروني"""
+    if str(ctx.author.id) != OWNER_ID:
+        return await ctx.send("❌ هذا الأمر للمالك فقط!")
+    
+    site_url = get_base_url()
+    if not site_url:
+        return await ctx.send("❌ الموقع غير متاح حالياً")
+    
+    try:
+        r = http_requests.get(f"{site_url}/api/visitors", timeout=10)
+        data = r.json()
+        visitors = data.get("visitors", [])
+        total = data.get("total", 0)
+    except:
+        return await ctx.send("❌ فشل الاتصال بالموقع")
+    
+    embed = discord.Embed(
+        title="═══════════════════════════\n👥 زوار الموقع الإلكتروني\n═══════════════════════════",
+        color=0x9B59B6,
+        timestamp=datetime.now(timezone.utc)
+    )
+    
+    embed.add_field(name="📊 إجمالي الزوار", value=f"**{total}** زائر", inline=True)
+    embed.add_field(name="🔗 الرابط", value=f"[اضغط هنا]({site_url})", inline=True)
+    
+    if visitors:
+        recent = visitors[:10]
+        lines = []
+        for i, v in enumerate(recent, 1):
+            username = v.get("username", "مجهول") or "مجهول"
+            ip = v.get("ip", "?")[:15]
+            page = v.get("page", "?")
+            time_str = v.get("time", "?")[-8:]
+            lines.append(f"`{i}.` **{username}** | `{ip}` | {page} | {time_str}")
+        
+        embed.add_field(
+            name="🕐 آخر 10 زوار",
+            value="\n".join(lines),
+            inline=False
+        )
+    else:
+        embed.add_field(name="🕐 آخر الزوار", value="لا يوجد زوار بعد", inline=False)
+    
+    embed.set_footer(text="═══════════════════════════\nMAX BOT • زوار الموقع\n═══════════════════════════")
+    await ctx.send(embed=embed)
+
 @bot.hybrid_command(name="status", aliases=['جودة', 'حالة_البوت', 'quality'])
 async def جودة(ctx):
     """!جودة - فحص حالة البوت"""

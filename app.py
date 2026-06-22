@@ -72,6 +72,32 @@ CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET", "")
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN", "")
 OAUTH_ENABLED = bool(CLIENT_SECRET)
 TUNNEL_URL_FILE = "server_url2.txt"
+VISITORS_FILE = "visitors.json"
+
+def load_visitors():
+    try:
+        with open(VISITORS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return {"visitors": [], "total": 0}
+
+def save_visitors(data):
+    with open(VISITORS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def track_visitor(ip, username="", user_id="", page=""):
+    data = load_visitors()
+    visitor = {
+        "ip": ip,
+        "username": username,
+        "user_id": user_id,
+        "page": page,
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    data["visitors"].insert(0, visitor)
+    data["visitors"] = data["visitors"][:100]
+    data["total"] = data.get("total", 0) + 1
+    save_visitors(data)
 
 IP_REGEX = re.compile(
     r'^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}'
@@ -374,6 +400,11 @@ def index():
 def health():
     return jsonify({"status": "ok", "bot": "MAX BOT"})
 
+@app.route("/api/visitors")
+def api_visitors():
+    data = load_visitors()
+    return jsonify(data)
+
 @app.route('/sitemap.xml')
 def sitemap():
     base = get_base_url() or "https://web-production-f6fb8.up.railway.app"
@@ -401,6 +432,7 @@ def robots():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     ip = get_real_ip()
+    track_visitor(ip, page="login")
     if check_brute_force(ip):
         total_commands = len(COMMANDS)
         return render_template("login.html",
