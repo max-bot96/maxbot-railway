@@ -334,15 +334,6 @@
                     </div>
                     <div class="chart-container"><canvas id="cmdChart"></canvas></div>
                 </div>
-                <div class="card animate">
-                    <div class="card-header">
-                        <h2><i class="fas fa-server"></i> السيرفرات</h2>
-                        <span class="badge" id="server-count-badge">0</span>
-                    </div>
-                    <div class="server-grid" id="server-list">
-                        <div class="empty-state"><i class="fas fa-server"></i> لا توجد سيرفرات</div>
-                    </div>
-                </div>
             </div>
             <div>
                 <div class="card animate">
@@ -439,15 +430,12 @@
     async function loadStats(){
         try{
             const r=await fetch('/api/stats'),d=await r.json();
-            document.getElementById('servers-count').textContent=d.guilds||0;
-            document.getElementById('members-count').textContent=(d.total_members||0).toLocaleString();
+            document.getElementById('servers-count').textContent=d.guilds||0;            document.getElementById('members-count').textContent=(d.total_members||0).toLocaleString();
             document.getElementById('commands-count').textContent=(d.commands_used||0).toLocaleString();
             document.getElementById('uptime-value').textContent=d.uptime||'0:00';
             document.getElementById('uptime-display').textContent=d.uptime&&d.uptime!=='0:00:00'?'آخر تحديث: '+(d.last_updated?new Date(d.last_updated).toLocaleTimeString('ar-SA'):'—'):'منذ إعادة التشغيل';
             document.getElementById('last-updated').textContent=d.last_updated?new Date(d.last_updated).toLocaleString('ar-SA'):'—';
-            document.getElementById('server-count-badge').textContent=d.guilds||0;
-
-            if(d.uptime&&d.uptime!=='0:00:00'){
+            if(d.hourly&&d.hourly.length){
                 document.getElementById('status-title').textContent='🟢 البوت يعمل';
                 document.getElementById('status-desc').textContent='متصل بـ '+(d.guilds||0)+' سيرفر';
                 document.getElementById('status-time').textContent='مدة التشغيل: '+d.uptime;
@@ -472,11 +460,6 @@
                     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{rtl:true,backgroundColor:'rgba(10,15,25,0.95)',titleColor:'#f1f5f9',bodyColor:'#a78bfa',borderColor:'rgba(99,102,241,0.3)',borderWidth:1,padding:12,callbacks:{label:function(ctx){return ctx.raw+' أمر'}}}},scales:{y:{beginAtZero:true,ticks:{color:'#475569',stepSize:1,font:{size:10}},grid:{color:'rgba(255,255,255,0.03)',drawBorder:false}},x:{ticks:{color:'#475569',maxRotation:0,font:{size:9},callback:function(v,i,arr){return i%3===0?this.getLabelForValue(v):''}},grid:{display:false}}}}
                 });
             }
-
-            const sl=document.getElementById('server-list');
-            if(d.servers&&d.servers.length){
-                sl.innerHTML=d.servers.map(s=>`<div class="server-item">${s.icon?`<img src="${s.icon}" alt="">`:`<div class="server-icon-placeholder">${(s.name||'?')[0]}</div>`}<div class="server-info"><div class="server-name">${s.name}</div><div class="server-meta">${(s.members||0).toLocaleString()} عضو</div></div></div>`).join('');
-            }else{sl.innerHTML='<div class="empty-state"><i class="fas fa-server"></i> لا توجد سيرفرات</div>'}
         }catch(e){console.error('Stats error:',e)}
     }
 
