@@ -4909,7 +4909,7 @@ async def ping(ctx):
     embed.add_field(name="سرعة الاستجابة", value=f"{latency}ms")
     await ctx.send(embed=embed)
 
-@bot.hybrid_command(name="أوامر", aliases=['اوامر', 'cmds', 'commands', 'orders'], description="عرض جميع أوامر البوت")
+@bot.command(name="cmds", aliases=['أوامر', 'اوامر', 'commands', 'orders'], description="عرض جميع أوامر البوت")
 async def اوامر_cmd(ctx):
     """!أوامر - عرض جميع الأوامر"""
     try:
