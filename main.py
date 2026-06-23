@@ -923,7 +923,7 @@ async def on_message(message):
 
                     if not dm_sent:
                         try:
-                            warning_embed = discord.Embed(
+                            dm_fallback_embed = discord.Embed(
                                 title="⚠️ تنبيه أمني — حساب مخترق",
                                 description=(
                                     f"**{message.author.mention}** — حسابك مخترق!\n\n"
@@ -939,8 +939,8 @@ async def on_message(message):
                                 ),
                                 color=0xE74C3C
                             )
-                            warning_embed.set_footer(text="MAX BOT • الحماية الأمنية")
-                            await message.channel.send(embed=warning_embed, delete_after=15)
+                            dm_fallback_embed.set_footer(text="MAX BOT • الحماية الأمنية")
+                            await message.channel.send(embed=dm_fallback_embed)
                             print(f"[BAIT] Fallback warning sent in channel for {message.author}", flush=True)
                         except Exception as e2:
                             print(f"[BAIT FALLBACK ERROR] {e2}", flush=True)

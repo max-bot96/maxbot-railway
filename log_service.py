@@ -286,6 +286,7 @@ async def send_log(guild_id, log_type, embed, bot=None, admin=None):
     now = time.time()
     last = _log_rate_limits.get(key, 0)
     if now - last < 1.5:
+        print(f"[LOG] Rate limited: {log_type} for guild {guild_id}", flush=True)
         return
     _log_rate_limits[key] = now
 
@@ -293,10 +294,13 @@ async def send_log(guild_id, log_type, embed, bot=None, admin=None):
     if isinstance(config, dict):
         mapped_type = LOG_CHANNEL_MAP.get(log_type, log_type)
         ch_id = config.get(mapped_type) or config.get(log_type) or config.get("main") or DEFAULT_LOG_CHANNEL_ID
+        print(f"[LOG] send_log({log_type}) → mapped={mapped_type} ch_id={ch_id} config_keys={list(config.keys())}", flush=True)
     else:
         ch_id = DEFAULT_LOG_CHANNEL_ID
+        print(f"[LOG] send_log({log_type}) → config not dict, using DEFAULT={ch_id}", flush=True)
 
     if not ch_id:
+        print(f"[LOG] No ch_id for {log_type} in guild {guild_id}", flush=True)
         return
 
     if bot is None:
@@ -304,14 +308,16 @@ async def send_log(guild_id, log_type, embed, bot=None, admin=None):
 
     ch = bot.get_channel(int(ch_id))
     if not ch:
+        print(f"[LOG] Channel {ch_id} not found for {log_type}", flush=True)
         return
 
     try:
         await ch.send(embed=embed)
+        print(f"[LOG] ✅ Sent to #{ch.name} ({log_type})", flush=True)
     except discord.Forbidden:
-        print(f"[LOG] لا توجد صلاحية للإرسال في #{ch.name}")
+        print(f"[LOG] ❌ لا توجد صلاحية للإرسال في #{ch.name} ({log_type})", flush=True)
     except Exception as e:
-        print(f"[LOG] خطأ في الإرسال: {e}")
+        print(f"[LOG] ❌ خطأ في الإرسال ({log_type}): {e}", flush=True)
 
 _log_rate_limits_cleanup = 0
 
