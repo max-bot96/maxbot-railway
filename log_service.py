@@ -308,6 +308,11 @@ async def send_log(guild_id, log_type, embed, bot=None, admin=None):
 
     ch = bot.get_channel(int(ch_id))
     if not ch:
+        try:
+            ch = await bot.fetch_channel(int(ch_id))
+        except:
+            pass
+    if not ch:
         print(f"[LOG] Channel {ch_id} not found for {log_type}", flush=True)
         return
 
