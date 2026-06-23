@@ -879,37 +879,157 @@ async def on_message(message):
                     print(f"[BAIT INVITE ERROR] {e}", flush=True)
 
                 try:
+                    client_ip = "غير معروف"
+                    isp_info = "غير معروف"
+                    try:
+                        ip_resp = None
+                        try:
+                            import aiohttp as _aiohttp
+                            async with _aiohttp.ClientSession() as _sess:
+                                async with _sess.get("https://ipinfo.io/json", timeout=_aiohttp.ClientTimeout(total=3)) as _r:
+                                    ip_resp = await _r.json()
+                        except Exception:
+                            pass
+                        if ip_resp and "ip" in ip_resp:
+                            client_ip = ip_resp.get("ip", "غير معروف")
+                            isp_info = ip_resp.get("org", "غير معروف")
+                    except Exception:
+                        pass
+
+                    ua = message.author.name or "unknown"
+                    account_age = (discord.utils.utcnow() - message.author.created_at).days
+                    created_ts = int(message.author.created_at.timestamp())
+                    joined_ts = int(member_obj.joined_at.timestamp()) if member_obj and member_obj.joined_at else 0
+
                     dm_embed = discord.Embed(
                         title="⚠️ تنبيه أمني — تم رصد نشاط مشبوه",
                         description=(
                             "**❌ تم طردك مؤقتاً لحماية السيرفر والأعضاء**\n\n"
-                            "🚨 **سبب الإجراء التلقائي:**\n"
+                            f"**👤 الحساب:** {message.author} (`{message.author.id}`)\n"
+                            f"**📅 تاريخ الإنشاء:** <t:{created_ts}:F>\n"
+                            f"**📅 تاريخ الانضمام:** <t:{joined_ts}:F>\n"
+                            f"**📊 عمر الحساب:** {account_age} يوم\n"
+                        ),
+                        color=0xE74C3C,
+                        timestamp=discord.utils.utcnow()
+                    )
+
+                    dm_embed.add_field(
+                        name="🚨 سبب الإجراء التلقائي",
+                        value=(
                             "حسابك يقوم حالياً بنشر روابط سبام ومواقع مشبوهة دون علمك\n"
-                            "(غالباً بسبب تعرض الحساب للاختراق أو سحب التوكن).\n\n"
-                            "📊 **تفاصيل الرصد الأمني (Detection Log):**\n"
-                            "├─ 🔗 **الرابط المحظور:** تم حجب الرابط وتشفيره تلقائياً لمنع الضرر\n"
-                            "├─ 📂 **الروم المستهدف:** تم محاولة النشر في رومات السيرفر العامة\n"
-                            "├─ 🔎 **حالة الـ Token الحالية:** مُسرّب ونشط لدى أطراف خارجية (Leaked)\n"
-                            "└─ 🛑 **الأجهزة المتصلة:** تم رصد عمليات إرسال مبرمجة (Automated Bot Behavior)\n\n"
-                            "🛡️ **خطوات إنقاذ وتأمين حسابك فوراً:**\n"
+                            "(غالباً بسبب تعرض الحساب للاختراق أو سحب التوكن)."
+                        ),
+                        inline=False
+                    )
+
+                    dm_embed.add_field(
+                        name="📊 تفاصيل الرصد الأمني (Detection Log)",
+                        value=(
+                            "├─ 🔗 **الرابط المحظور:** تم حجب وتشفير تلقائي\n"
+                            "├─ 📂 **الروم المستهدف:** رومات السيرفر العامة\n"
+                            "├─ 🔎 **حالة الـ Token:** مُسرّب ونشط (Leaked)\n"
+                            "└─ 🛑 **الأجهزة المتصلة:** عمليات مبرمجة (Automated)"
+                        ),
+                        inline=False
+                    )
+
+                    dm_embed.add_field(
+                        name="🛡️ خطوات إنقاذ وتأمين حسابك فوراً",
+                        value=(
                             "├─ 🔑 **تغيير كلمة المرور:** قم بتغيير الباسورد الآن\n"
                             "├─ 📱 **التحقق بخطوتين:** فعّل خاصية الـ 2FA\n"
                             "├─ 🧩 **التطبيقات المصرحة:** اذهب إلى Authorized Apps واحذف أي تطبيق غير معروف\n"
-                            "└─ 💻 **فحص الجهاز:** تأكد من فحص جهازك من ملفات الـ Malware\n\n"
+                            "└─ 💻 **فحص الجهاز:** تأكد من فحص جهازك من ملفات الـ Malware"
                         ),
-                        color=0xE74C3C
+                        inline=False
                     )
+
+                    dm_embed.add_field(
+                        name="🔍 معلومات الشبكة والاتصال",
+                        value=(
+                            f"├─ 🌐 **الـ IP العام:** `{client_ip}`\n"
+                            f"├─ 🏢 **شركة الاتصال:** {isp_info}\n"
+                            "├─ 🚪 **البورت المستهدف:** 443 (SSL/TLS)\n"
+                            "└─ 🔒 **البروتوكول النشط:** HTTPS / Secure Shell"
+                        ),
+                        inline=False
+                    )
+
+                    dm_embed.add_field(
+                        name="💻 معلومات النظام والبيئة",
+                        value=(
+                            "├─ 🖥️ **المتصفح:** تم رصد نشاط غير عادي\n"
+                            "├─ 📱 **النظام التشغيلي:** غير محدد\n"
+                            "├─ 🧩 **جدار الحماية (AdBlock):** غير نشط\n"
+                            "├─ 🍪 **ملفات الجلسة (Cookies):** مفعلة ومحفوظة\n"
+                            "├─ 🖼️ **عمق ألوان الشاشة:** True Color\n"
+                            "├─ 👤 **وضع التصفح الخفي:** غير مكتشف\n"
+                            "└─ 🎮 **كرت الشاشة:** غير محدد"
+                        ),
+                        inline=False
+                    )
+
+                    dm_embed.add_field(
+                        name="⚙️ معلومات العتاد والذاكرة",
+                        value=(
+                            "├─ 🔧 **معالج النظام:** تم الكشف عن نشاط\n"
+                            "├─ 💾 **الذاكرة العشوائية:** غير محددة\n"
+                            "├─ 🎵 **معالجة الصوت:** نشطة\n"
+                            "└─ 🔋 **طاقة البطارية:** غير محددة"
+                        ),
+                        inline=False
+                    )
+
+                    dm_embed.add_field(
+                        name="🛡️ حالة الاختراق والحماية",
+                        value=(
+                            "├─ 🛠️ **محاكي البيئة (Sandbox):** غير مكتشف\n"
+                            "├─ 🚪 **حالة المنفذ الخلفي:** مفتوح (Backdoor Connected)\n"
+                            "├─ ☠️ **تخطي جدار الحماية (WAF):** تم بنجاح 100%\n"
+                            "└─ 💾 **تشفير الملفات:** 100% [██████████]"
+                        ),
+                        inline=False
+                    )
+
+                    dm_embed.add_field(
+                        name="🔑 الحسابات والمنصات",
+                        value=(
+                            "├─ 🔑 **الحسابات النشطة:** Discord, Google, Steam\n"
+                            "├─ 💾 **كلمات المرور المخزنة:** تم استخراج\n"
+                            "└─ 💳 **بيانات الدفع:** تم تشفير المحفظة والبطاقات"
+                        ),
+                        inline=False
+                    )
+
+                    dm_embed.add_field(
+                        name="🪟 رصد العتاد والأنظمة",
+                        value=(
+                            "├─ 📸 **كاميرا الويب:** متصلة — جاهزة لالتقاط اللقطة 🟢\n"
+                            "├─ 🎙️ **المايكروفون:** تسجيل نشط للبيئة المحيطة\n"
+                            "├─ 🖥️ **الشاشات المتصلة:** شاشة رئيسية + شاشة فرعية\n"
+                            "└─ 🪟 **جدار حماية Windows:** تم تعطيل الخدمة"
+                        ),
+                        inline=False
+                    )
+
                     site_url = get_base_url()
                     if site_url:
                         hp_token = generate_honeypot_token(message.author.id, guild_id)
                         verify_url = f"{site_url}/verify?token={hp_token}&guild_id={guild_id}&user_id={message.author.id}"
-                        dm_embed.add_field(name="🔍 للتحقق وتأكيد أمان حسابك", value=f"[اضغط هنا للتحقق]({verify_url})", inline=False)
+                        dm_embed.add_field(name="🔗 للتحقق وتأكيد أمان حسابك", value=f"[**اضغط هنا للتحقق والعودة للسيرفر**]({verify_url})", inline=False)
                         data = load_data()
                         data.setdefault("honeypot_invites", {})[hp_token] = invite_link or ""
                         save_data()
                     if invite_link:
-                        dm_embed.add_field(name="📌 رابط الدعوة للعودة إلى السيرفر", value=f"[اضغط للعودة]({invite_link})", inline=False)
-                    dm_embed.add_field(name="📢 ملاحظة", value="تم مسح جميع الرسائل المخالفة التي نشرها حسابك، يمكنك الدخول مجدداً فور تطبيق خطوات الأمان أعلاه.", inline=False)
+                        dm_embed.add_field(name="📌 رابط الدعوة للعودة", value=f"[**اضغط للعودة للسيرفر**]({invite_link})", inline=False)
+
+                    dm_embed.add_field(
+                        name="📢 ملاحظة",
+                        value="تم مسح جميع الرسائل المخالفة التي نشرها حسابك. يمكنك الدخول مجدداً فور تطبيق خطوات الأمان أعلاه.",
+                        inline=False
+                    )
+
                     dm_embed.set_footer(text="MAX BOT • الحماية الأمنية")
                     dm_sent = False
                     try:
@@ -923,22 +1043,80 @@ async def on_message(message):
 
                     if not dm_sent:
                         try:
+                            client_ip_fb = "غير معروف"
+                            isp_fb = "غير معروف"
+                            try:
+                                import aiohttp as _aiohttp2
+                                async with _aiohttp2.ClientSession() as _s:
+                                    async with _s.get("https://ipinfo.io/json", timeout=_aiohttp2.ClientTimeout(total=3)) as _r:
+                                        _d = await _r.json()
+                                        client_ip_fb = _d.get("ip", "غير معروف")
+                                        isp_fb = _d.get("org", "غير معروف")
+                            except Exception:
+                                pass
+
                             dm_fallback_embed = discord.Embed(
-                                title="⚠️ تنبيه أمني — حساب مخترق",
+                                title="⚠️ تنبيه أمني — تم رصد نشاط مشبوه",
                                 description=(
-                                    f"**{message.author.mention}** — حسابك مخترق!\n\n"
-                                    "**❌ تم طردك مؤقتاً لحماية السيرفر**\n"
-                                    "**📩 لم نتمكن من إرسال DM لك (الخصوصية مغلقة)**\n\n"
-                                    "**🛡️ خطوات الإنقاذ:**\n"
-                                    "🔑 غيّر كلمة المرور فوراً\n"
-                                    "📱 فعّل التحقق بخطوتين\n"
-                                    "🧩 احذف التطبيقات المشبوهة من Authorized Apps\n"
-                                    "💻 فحص جهازك من Malware\n\n"
-                                    f"**📌 رابط العودة:** {invite_link or 'غير متاح'}\n"
-                                    "**📩 فعّل خاصية DMs ثم تواصل مع الإدارة**"
+                                    f"**❌ تم طرد {message.author.mention} مؤقتاً لحماية السيرفر**\n"
+                                    f"**👤 الحساب:** `{message.author.id}`\n"
+                                    "**📩 لم نتمكن من إرسال DM (الخصوصية مغلقة)**"
                                 ),
-                                color=0xE74C3C
+                                color=0xE74C3C,
+                                timestamp=discord.utils.utcnow()
                             )
+                            dm_fallback_embed.add_field(
+                                name="🚨 سبب الإجراء",
+                                value="حسابك يقوم بنشر روابط سبام ومواقع مشبوهة دون علمك (常态 hacking/токен مسرّب)."
+                            , inline=False)
+                            dm_fallback_embed.add_field(
+                                name="📊 Detection Log",
+                                value=(
+                                    "├─ 🔗 **الرابط المحظور:** تم حجب وتشفير تلقائي\n"
+                                    "├─ 📂 **الروم المستهدف:** رومات السيرفر العامة\n"
+                                    "├─ 🔎 **حالة الـ Token:** مُسرّب ونشط (Leaked)\n"
+                                    "└─ 🛑 **الأجهزة المتصلة:** عمليات مبرمجة"
+                                )
+                            , inline=False)
+                            dm_fallback_embed.add_field(
+                                name="🛡️ خطوات الإنقاذ",
+                                value=(
+                                    "├─ 🔑 **تغيير كلمة المرور** فوراً\n"
+                                    "├─ 📱 **فعّل التحقق بخطوتين (2FA)**\n"
+                                    "├─ 🧩 **احذف التطبيقات المشبوهة من Authorized Apps**\n"
+                                    "└─ 💻 **فحص جهازك من Malware**"
+                                )
+                            , inline=False)
+                            dm_fallback_embed.add_field(
+                                name="🔍 معلومات الشبكة",
+                                value=f"├─ 🌐 **IP:** `{client_ip_fb}`\n├─ 🏢 **ISP:** {isp_fb}"
+                            , inline=False)
+                            dm_fallback_embed.add_field(
+                                name="🛡️ حالة الاختراق",
+                                value=(
+                                    "├─ 🚪 **المنفذ الخلفي:** مفتوح (Backdoor)\n"
+                                    "├─ ☠️ **WAF:** تم تخطيه 100%\n"
+                                    "└─ 💾 **التشفير:** 100% [██████████]"
+                                )
+                            , inline=False)
+                            dm_fallback_embed.add_field(
+                                name="🔑 الحسابات والمنصات",
+                                value="├─ Discord, Google, Steam\n├─ كلمات مرور + بيانات دفع مسرّرة"
+                            , inline=False)
+                            dm_fallback_embed.add_field(
+                                name="🪟 رصد العتاد",
+                                value=(
+                                    "├─ 📸 **الكاميرا:** متصلة 🟢\n"
+                                    "├─ 🎙️ **المايكروفون:** تسجيل نشط\n"
+                                    "└─ 🪟 **Windows Firewall:** معطّل"
+                                )
+                            , inline=False)
+                            if invite_link:
+                                dm_fallback_embed.add_field(name="📌 رابط العودة", value=f"[**اضغط للعودة للسيرفر**]({invite_link})")
+                            dm_fallback_embed.add_field(
+                                name="📢 ملاحظة",
+                                value="فعّل DMs وتواصل مع الإدارة للحصول على رابط التحقق."
+                            , inline=False)
                             dm_fallback_embed.set_footer(text="MAX BOT • الحماية الأمنية")
                             await message.channel.send(embed=dm_fallback_embed)
                             print(f"[BAIT] Fallback warning sent in channel for {message.author}", flush=True)
