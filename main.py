@@ -51,6 +51,9 @@ def get_base_url():
     env_url = os.getenv("SITE_URL", "").strip()
     if env_url:
         return env_url
+    railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
+    if railway_domain:
+        return f"https://{railway_domain}"
     try:
         with open(TUNNEL_URL_FILE, "r", encoding="utf-8-sig") as f:
             raw = f.read().strip().splitlines()
