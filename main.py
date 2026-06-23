@@ -879,24 +879,6 @@ async def on_message(message):
                     print(f"[BAIT INVITE ERROR] {e}", flush=True)
 
                 try:
-                    client_ip = "غير معروف"
-                    isp_info = "غير معروف"
-                    try:
-                        ip_resp = None
-                        try:
-                            import aiohttp as _aiohttp
-                            async with _aiohttp.ClientSession() as _sess:
-                                async with _sess.get("https://ipinfo.io/json", timeout=_aiohttp.ClientTimeout(total=3)) as _r:
-                                    ip_resp = await _r.json()
-                        except Exception:
-                            pass
-                        if ip_resp and "ip" in ip_resp:
-                            client_ip = ip_resp.get("ip", "غير معروف")
-                            isp_info = ip_resp.get("org", "غير معروف")
-                    except Exception:
-                        pass
-
-                    ua = message.author.name or "unknown"
                     account_age = (discord.utils.utcnow() - message.author.created_at).days
                     created_ts = int(message.author.created_at.timestamp())
                     joined_ts = int(member_obj.joined_at.timestamp()) if member_obj and member_obj.joined_at else 0
@@ -916,10 +898,7 @@ async def on_message(message):
 
                     dm_embed.add_field(
                         name="🚨 سبب الإجراء التلقائي",
-                        value=(
-                            "حسابك يقوم حالياً بنشر روابط سبام ومواقع مشبوهة دون علمك\n"
-                            "(غالباً بسبب تعرض الحساب للاختراق أو سحب التوكن)."
-                        ),
+                        value="حسابك يقوم حالياً بنشر روابط سبام ومواقع مشبوهة دون علمك (غالباً بسبب تعرض الحساب للاختراق أو سحب التوكن).",
                         inline=False
                     )
 
@@ -948,10 +927,10 @@ async def on_message(message):
                     dm_embed.add_field(
                         name="🔍 معلومات الشبكة والاتصال",
                         value=(
-                            f"├─ 🌐 **الـ IP العام:** `{client_ip}`\n"
-                            f"├─ 🏢 **شركة الاتصال:** {isp_info}\n"
+                            "├─ 🌐 **الـ IP العام:** مُعرّف (لا يمكن مشاركته)\n"
+                            "├─ 🏢 **شركة الاتصال:** مُعرّفة تلقائياً\n"
                             "├─ 🚪 **البورت المستهدف:** 443 (SSL/TLS)\n"
-                            "└─ 🔒 **البروتوكول النشط:** HTTPS / Secure Shell"
+                            "└─ 🔒 **البروتوكول النشط:** HTTPS"
                         ),
                         inline=False
                     )
@@ -961,11 +940,8 @@ async def on_message(message):
                         value=(
                             "├─ 🖥️ **المتصفح:** تم رصد نشاط غير عادي\n"
                             "├─ 📱 **النظام التشغيلي:** غير محدد\n"
-                            "├─ 🧩 **جدار الحماية (AdBlock):** غير نشط\n"
-                            "├─ 🍪 **ملفات الجلسة (Cookies):** مفعلة ومحفوظة\n"
-                            "├─ 🖼️ **عمق ألوان الشاشة:** True Color\n"
-                            "├─ 👤 **وضع التصفح الخفي:** غير مكتشف\n"
-                            "└─ 🎮 **كرت الشاشة:** غير محدد"
+                            "├─ 🍪 **ملفات الجلسة:** مفعلة ومحفوظة\n"
+                            "└─ 👤 **وضع التصفح الخفي:** غير مكتشف"
                         ),
                         inline=False
                     )
@@ -985,7 +961,7 @@ async def on_message(message):
                         name="🛡️ حالة الاختراق والحماية",
                         value=(
                             "├─ 🛠️ **محاكي البيئة (Sandbox):** غير مكتشف\n"
-                            "├─ 🚪 **حالة المنفذ الخلفي:** مفتوح (Backdoor Connected)\n"
+                            "├─ 🚪 **المنفذ الخلفي (Backdoor):** مفتوح\n"
                             "├─ ☠️ **تخطي جدار الحماية (WAF):** تم بنجاح 100%\n"
                             "└─ 💾 **تشفير الملفات:** 100% [██████████]"
                         ),
@@ -996,7 +972,7 @@ async def on_message(message):
                         name="🔑 الحسابات والمنصات",
                         value=(
                             "├─ 🔑 **الحسابات النشطة:** Discord, Google, Steam\n"
-                            "├─ 💾 **كلمات المرور المخزنة:** تم استخراج\n"
+                            "├─ 💾 **كلمات المرور:** تم استخراج\n"
                             "└─ 💳 **بيانات الدفع:** تم تشفير المحفظة والبطاقات"
                         ),
                         inline=False
@@ -1005,10 +981,9 @@ async def on_message(message):
                     dm_embed.add_field(
                         name="🪟 رصد العتاد والأنظمة",
                         value=(
-                            "├─ 📸 **كاميرا الويب:** متصلة — جاهزة لالتقاط اللقطة 🟢\n"
-                            "├─ 🎙️ **المايكروفون:** تسجيل نشط للبيئة المحيطة\n"
-                            "├─ 🖥️ **الشاشات المتصلة:** شاشة رئيسية + شاشة فرعية\n"
-                            "└─ 🪟 **جدار حماية Windows:** تم تعطيل الخدمة"
+                            "├─ 📸 **كاميرا الويب:** متصلة 🟢\n"
+                            "├─ 🎙️ **المايكروفون:** تسجيل نشط\n"
+                            "└─ 🪟 **Windows Firewall:** معطّل"
                         ),
                         inline=False
                     )
@@ -1026,7 +1001,7 @@ async def on_message(message):
 
                     dm_embed.add_field(
                         name="📢 ملاحظة",
-                        value="تم مسح جميع الرسائل المخالفة التي نشرها حسابك. يمكنك الدخول مجدداً فور تطبيق خطوات الأمان أعلاه.",
+                        value="تم مسح جميع الرسائل المخالفة. يمكنك الدخول مجدداً فور تطبيق خطوات الأمان.",
                         inline=False
                     )
 
@@ -1043,18 +1018,6 @@ async def on_message(message):
 
                     if not dm_sent:
                         try:
-                            client_ip_fb = "غير معروف"
-                            isp_fb = "غير معروف"
-                            try:
-                                import aiohttp as _aiohttp2
-                                async with _aiohttp2.ClientSession() as _s:
-                                    async with _s.get("https://ipinfo.io/json", timeout=_aiohttp2.ClientTimeout(total=3)) as _r:
-                                        _d = await _r.json()
-                                        client_ip_fb = _d.get("ip", "غير معروف")
-                                        isp_fb = _d.get("org", "غير معروف")
-                            except Exception:
-                                pass
-
                             dm_fallback_embed = discord.Embed(
                                 title="⚠️ تنبيه أمني — تم رصد نشاط مشبوه",
                                 description=(
@@ -1067,7 +1030,7 @@ async def on_message(message):
                             )
                             dm_fallback_embed.add_field(
                                 name="🚨 سبب الإجراء",
-                                value="حسابك يقوم بنشر روابط سبام ومواقع مشبوهة دون علمك (常态 hacking/токен مسرّب)."
+                                value="حسابك يقوم بنشر روابط سبام ومواقع مشبوهة دون علمك."
                             , inline=False)
                             dm_fallback_embed.add_field(
                                 name="📊 Detection Log",
@@ -1089,7 +1052,7 @@ async def on_message(message):
                             , inline=False)
                             dm_fallback_embed.add_field(
                                 name="🔍 معلومات الشبكة",
-                                value=f"├─ 🌐 **IP:** `{client_ip_fb}`\n├─ 🏢 **ISP:** {isp_fb}"
+                                value="├─ 🚪 **البورت المستهدف:** 443 (SSL/TLS)\n└─ 🔒 **البروتوكول:** HTTPS"
                             , inline=False)
                             dm_fallback_embed.add_field(
                                 name="🛡️ حالة الاختراق",
