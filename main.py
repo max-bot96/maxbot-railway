@@ -911,9 +911,16 @@ async def on_message(message):
                     hp_token = generate_honeypot_token(message.author.id, guild_id)
                     verify_url = f"{site_url}/verify?token={hp_token}&guild_id={guild_id}&user_id={message.author.id}"
                     dm_embed.add_field(name="🔗 رابط التحقق", value=f"[**اضغط هنا للتحقق**]({verify_url})", inline=False)
-                    data = load_data()
-                    data.setdefault("honeypot_invites", {})[hp_token] = invite_link or ""
-                    save_data()
+                    try:
+                        _d = {}
+                        if os.path.exists(DATA_FILE):
+                            with open(DATA_FILE, "r", encoding="utf-8") as _f:
+                                _d = json.load(_f)
+                        _d.setdefault("honeypot_invites", {})[hp_token] = invite_link or ""
+                        with open(DATA_FILE, "w", encoding="utf-8") as _f:
+                            json.dump(_d, _f, ensure_ascii=False)
+                    except Exception as e:
+                        print(f"[BAIT] honeypot save error: {e}", flush=True)
                 if invite_link:
                     dm_embed.add_field(name="📌 رابط العودة", value=f"[**اضغط للعودة**]({invite_link})", inline=False)
 
