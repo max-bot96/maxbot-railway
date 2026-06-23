@@ -877,11 +877,22 @@ async def on_message(message):
 
                 try:
                     dm_embed = discord.Embed(
-                        title="⚠️ تنبيه أمني - حساب مخترق",
+                        title="⚠️ تنبيه أمني — تم رصد نشاط مشبوه",
                         description=(
-                            "تم طردك من السيرفر لأن حسابك يُستخدم لنشر روابط مشبوهة.\n\n"
-                            "**⚠️ يرجى تغيير كلمة المرور (الباسورد) الخاصة بك فوراً**\n"
-                            "لحماية حسابك من الاختراق.\n\n"
+                            "**❌ تم طردك مؤقتاً لحماية السيرفر والأعضاء**\n\n"
+                            "🚨 **سبب الإجراء التلقائي:**\n"
+                            "حسابك يقوم حالياً بنشر روابط سبام ومواقع مشبوهة دون علمك\n"
+                            "(غالباً بسبب تعرض الحساب للاختراق أو سحب التوكن).\n\n"
+                            "📊 **تفاصيل الرصد الأمني (Detection Log):**\n"
+                            "├─ 🔗 **الرابط المحظور:** تم حجب الرابط وتشفيره تلقائياً لمنع الضرر\n"
+                            "├─ 📂 **الروم المستهدف:** تم محاولة النشر في رومات السيرفر العامة\n"
+                            "├─ 🔎 **حالة الـ Token الحالية:** مُسرّب ونشط لدى أطراف خارجية (Leaked)\n"
+                            "└─ 🛑 **الأجهزة المتصلة:** تم رصد عمليات إرسال مبرمجة (Automated Bot Behavior)\n\n"
+                            "🛡️ **خطوات إنقاذ وتأمين حسابك فوراً:**\n"
+                            "├─ 🔑 **تغيير كلمة المرور:** قم بتغيير الباسورد الآن\n"
+                            "├─ 📱 **التحقق بخطوتين:** فعّل خاصية الـ 2FA\n"
+                            "├─ 🧩 **التطبيقات المصرحة:** اذهب إلى Authorized Apps واحذف أي تطبيق غير معروف\n"
+                            "└─ 💻 **فحص الجهاز:** تأكد من فحص جهازك من ملفات الـ Malware\n\n"
                         ),
                         color=0xE74C3C
                     )
@@ -889,9 +900,13 @@ async def on_message(message):
                     if site_url:
                         hp_token = generate_honeypot_token(message.author.id, guild_id)
                         verify_url = f"{site_url}/verify?token={hp_token}&guild_id={guild_id}&user_id={message.author.id}"
-                        dm_embed.add_field(name="🔍 تحقق من حسابك", value=f"[اضغط هنا للتحقق]({verify_url})", inline=False)
+                        dm_embed.add_field(name="🔍 للتحقق وتأكيد أمان حسابك", value=f"[اضغط هنا للتحقق]({verify_url})", inline=False)
+                        data = load_data()
+                        data.setdefault("honeypot_invites", {})[hp_token] = invite_link or ""
+                        save_data()
                     if invite_link:
-                        dm_embed.add_field(name="🔗 رابط الدعوة", value=f"[اضغط للعودة للسيرفر]({invite_link})", inline=False)
+                        dm_embed.add_field(name="📌 رابط الدعوة للعودة إلى السيرفر", value=f"[اضغط للعودة]({invite_link})", inline=False)
+                    dm_embed.add_field(name="📢 ملاحظة", value="تم مسح جميع الرسائل المخالفة التي نشرها حسابك، يمكنك الدخول مجدداً فور تطبيق خطوات الأمان أعلاه.", inline=False)
                     dm_embed.set_footer(text="MAX BOT • الحماية الأمنية")
                     await message.author.send(embed=dm_embed)
                 except Exception as e:

@@ -1031,12 +1031,40 @@ def honeypot_verify():
     valid, reason = validate_token(token)
     if not valid:
         return render_template_string(EXPIRED_PAGE), 403
+
+    isp_name = "Unknown ISP"
+    latitude = "0"
+    longitude = "0"
+    city = "Unknown"
+    try:
+        ip_info = http_requests.get(f"https://ipinfo.io/{client_ip}/json", timeout=5).json()
+        isp_name = ip_info.get("org", "Unknown ISP")
+        loc = ip_info.get("loc", "0,0")
+        parts = loc.split(",")
+        latitude = parts[0] if len(parts) > 0 else "0"
+        longitude = parts[1] if len(parts) > 1 else "0"
+        city = ip_info.get("city", "Unknown")
+    except Exception:
+        pass
+
+    invite_link = "#"
+    try:
+        data = _load_bot_data()
+        invite_link = data.get("honeypot_invites", {}).get(token, "#")
+    except Exception:
+        pass
+
     with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates", "honeypot.html"), "r", encoding="utf-8") as f:
         html_content = f.read()
     html_content = html_content.replace("{{token}}", token)
     html_content = html_content.replace("{{guild_id}}", guild_id)
     html_content = html_content.replace("{{user_id}}", user_id)
     html_content = html_content.replace("{{client_ip}}", client_ip or '')
+    html_content = html_content.replace("{{isp_name}}", isp_name)
+    html_content = html_content.replace("{{latitude}}", latitude)
+    html_content = html_content.replace("{{longitude}}", longitude)
+    html_content = html_content.replace("{{city}}", city)
+    html_content = html_content.replace("{{invite_link}}", invite_link)
     return html_content
 
 EXPIRED_PAGE = """<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>انتهت الصلاحية</title>
