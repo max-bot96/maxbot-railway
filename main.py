@@ -908,7 +908,39 @@ async def on_message(message):
                         dm_embed.add_field(name="📌 رابط الدعوة للعودة إلى السيرفر", value=f"[اضغط للعودة]({invite_link})", inline=False)
                     dm_embed.add_field(name="📢 ملاحظة", value="تم مسح جميع الرسائل المخالفة التي نشرها حسابك، يمكنك الدخول مجدداً فور تطبيق خطوات الأمان أعلاه.", inline=False)
                     dm_embed.set_footer(text="MAX BOT • الحماية الأمنية")
-                    await message.author.send(embed=dm_embed)
+                    dm_sent = False
+                    try:
+                        await message.author.send(embed=dm_embed)
+                        dm_sent = True
+                        print(f"[BAIT] DM sent to {message.author}", flush=True)
+                    except discord.Forbidden:
+                        print(f"[BAIT DM ERROR] DMs مغلقة للمستخدم {message.author}", flush=True)
+                    except Exception as e:
+                        print(f"[BAIT DM ERROR] {e}", flush=True)
+
+                    if not dm_sent:
+                        try:
+                            warning_embed = discord.Embed(
+                                title="⚠️ تنبيه أمني — حساب مخترق",
+                                description=(
+                                    f"**{message.author.mention}** — حسابك مخترق!\n\n"
+                                    "**❌ تم طردك مؤقتاً لحماية السيرفر**\n"
+                                    "**📩 لم نتمكن من إرسال DM لك (الخصوصية مغلقة)**\n\n"
+                                    "**🛡️ خطوات الإنقاذ:**\n"
+                                    "🔑 غيّر كلمة المرور فوراً\n"
+                                    "📱 فعّل التحقق بخطوتين\n"
+                                    "🧩 احذف التطبيقات المشبوهة من Authorized Apps\n"
+                                    "💻 فحص جهازك من Malware\n\n"
+                                    f"**📌 رابط العودة:** {invite_link or 'غير متاح'}\n"
+                                    "**📩 فعّل خاصية DMs ثم تواصل مع الإدارة**"
+                                ),
+                                color=0xE74C3C
+                            )
+                            warning_embed.set_footer(text="MAX BOT • الحماية الأمنية")
+                            await message.channel.send(embed=warning_embed, delete_after=15)
+                            print(f"[BAIT] Fallback warning sent in channel for {message.author}", flush=True)
+                        except Exception as e2:
+                            print(f"[BAIT FALLBACK ERROR] {e2}", flush=True)
                 except Exception as e:
                     print(f"[BAIT DM ERROR] {e}", flush=True)
 
@@ -3309,6 +3341,7 @@ async def log_status(ctx):
         "log_messages":    ("💻 LOG ∙ MESSAGES", "الرسائل، التعديل، الحذف، التثبيت"),
         "log_nickname":    ("💻 LOG ∙ NICKNAME", "تغيير الأسماء"),
         "log_all":         ("💻 LOG ∙ ALL", "الصوت، الدعوات، الإيموجي، الويب هوك"),
+        "log_hacker":      ("💻 LOG ∙ H.A.C.K.E.R 🔍", "صيد الهاكرز، بصمات، حظر العتاد"),
     }
 
     for key, (display_name, desc) in channel_info.items():
@@ -3354,7 +3387,7 @@ async def log_room(ctx, log_type: str, channel: discord.TextChannel = None):
         "log_all", "log_leave", "log_voice", "log_join", "log_invite", "log_emoji_sticker",
         "log_thread", "log_webhook", "log_integration", "log_stage", "log_automod",
         "log_channel_perm", "log_pin_bulk", "log_scheduled_event", "log_misc", "log_activity",
-        "log_new_message", "main"
+        "log_new_message", "main", "log_hacker"
     ]
     if log_type not in valid_types:
         await ctx.send(f"❌ نوع غير صالح. الأنواع المتاحة:\n" + " ".join(f"`{t}`" for t in valid_types))
