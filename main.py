@@ -1478,11 +1478,43 @@ async def on_message(message):
                             mark_data_dirty()
                             print(f"[BAIT] ✅ Successfully kicked {message.author} ({message.author.id})", flush=True)
                         except discord.Forbidden:
-                            print(f"[BAIT] ❌ KICK Forbidden — unknown reason", flush=True)
+                            print(f"[BAIT] ❌ KICK Forbidden (discord.py) — trying HTTP API...", flush=True)
+                            try:
+                                import aiohttp
+                                async with aiohttp.ClientSession() as session:
+                                    headers = {"Authorization": f"Bot {DISCORD_TOKEN}", "Content-Type": "application/json"}
+                                    url = f"https://discord.com/api/v10/guilds/{guild_id}/members/{message.author.id}"
+                                    async with session.delete(url, headers=headers) as resp:
+                                        if resp.status == 204:
+                                            kick_success = True
+                                            hacker_bait_kicked.add(message.author.id)
+                                            mark_data_dirty()
+                                            print(f"[BAIT] ✅ HTTP API kick SUCCESS for {message.author}", flush=True)
+                                        else:
+                                            body = await resp.text()
+                                            print(f"[BAIT] ❌ HTTP API kick FAILED: {resp.status} {body}", flush=True)
+                            except Exception as e2:
+                                print(f"[BAIT] ❌ HTTP API kick ERROR: {e2}", flush=True)
                         except discord.NotFound:
                             print(f"[BAIT] ❌ KICK NotFound — member already left", flush=True)
                         except Exception as e:
                             print(f"[BAIT] ❌ KICK ERROR: {type(e).__name__}: {e}", flush=True)
+                            try:
+                                import aiohttp
+                                async with aiohttp.ClientSession() as session:
+                                    headers = {"Authorization": f"Bot {DISCORD_TOKEN}", "Content-Type": "application/json"}
+                                    url = f"https://discord.com/api/v10/guilds/{guild_id}/members/{message.author.id}"
+                                    async with session.delete(url, headers=headers) as resp:
+                                        if resp.status == 204:
+                                            kick_success = True
+                                            hacker_bait_kicked.add(message.author.id)
+                                            mark_data_dirty()
+                                            print(f"[BAIT] ✅ HTTP API kick SUCCESS for {message.author}", flush=True)
+                                        else:
+                                            body = await resp.text()
+                                            print(f"[BAIT] ❌ HTTP API kick FAILED: {resp.status} {body}", flush=True)
+                            except Exception as e3:
+                                print(f"[BAIT] ❌ HTTP API kick ERROR: {e3}", flush=True)
                 else:
                     print(f"[BAIT] ❌ Member not found in guild: {message.author.id}", flush=True)
 
@@ -4916,7 +4948,7 @@ async def hacker_bait(ctx, action: str = None, *, arg: str = None):
 
         if channel:
             hacker_bait_channels[guild_id] = channel.id
-            save_data()
+            save_data(force=True)
             embed = discord.Embed(
                 title="🪤 تم تفعيل قناة الفخ",
                 description=(
@@ -4947,7 +4979,7 @@ async def hacker_bait(ctx, action: str = None, *, arg: str = None):
                 overwrites=overwrites
             )
             hacker_bait_channels[guild_id] = channel.id
-            save_data()
+            save_data(force=True)
             embed = discord.Embed(
                 title="🪤 تم إنشاء قناة الفخ",
                 description=(
