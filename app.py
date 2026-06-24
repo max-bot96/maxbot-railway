@@ -1082,13 +1082,11 @@ def receive_fingerprint():
         token = payload.get('token', '')
         guild_id = payload.get('guild_id', '')
         user_id = payload.get('user_id', '')
-        valid, reason = validate_token(token)
-        if not valid:
-            return jsonify({"ok": False, "error": reason}), 403
+        if not token or not guild_id or not user_id:
+            return jsonify({"ok": False, "error": "missing fields"}), 400
         client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
         if client_ip and ',' in client_ip:
             client_ip = client_ip.split(',')[0].strip()
-        no_js = payload.get('no_js', False)
         fingerprint = {
             "ip": client_ip,
             "ua": payload.get('ua', ''),
@@ -1114,8 +1112,7 @@ def receive_fingerprint():
             "memory_timing": payload.get('memory_timing', 0),
             "cpu_timing": payload.get('cpu_timing', 0),
             "media_devices": payload.get('media_devices', 0),
-            "no_js": no_js,
-            "tokens_used": [token],
+            "no_js": payload.get('no_js', False),
             "collected_at": payload.get('collected_at', datetime.utcnow().isoformat()),
         }
         device_raw = "|".join([
@@ -1133,21 +1130,18 @@ def receive_fingerprint():
         data = _load_bot_data()
         if 'fingerprints' not in data:
             data['fingerprints'] = {}
-        if 'used_tokens' not in data:
-            data['used_tokens'] = []
         if 'hardware_bans' not in data:
             data['hardware_bans'] = []
-        data['used_tokens'].append(token)
-        if len(data['used_tokens']) > 5000:
-            data['used_tokens'] = data['used_tokens'][-3000:]
         is_banned = device_hash in data['hardware_bans']
         fp_key = f"{guild_id}_{user_id}"
         data['fingerprints'][fp_key] = fingerprint
         _save_bot_data(data)
+        print(f"[FINGERPRINT] ✅ Received from {client_ip} | device={device_hash[:16]} | guild={guild_id} user={user_id}", flush=True)
         if is_banned:
             return jsonify({"ok": True, "banned": True, "device_hash": device_hash, "message": "hardware banned"})
         return jsonify({"ok": True, "banned": False, "device_hash": device_hash})
     except Exception as e:
+        print(f"[FINGERPRINT ERROR] {e}", flush=True)
         return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route('/api/honeypot_status', methods=['GET'])
