@@ -1266,10 +1266,11 @@ async def on_message(message):
                         print(f"[BAIT] ❌ FALLBACK ERROR: {e2}", flush=True)
 
                 roles_text = "بدون"
+                roles_list = []
                 if member_obj:
-                    roles_list = [r.mention for r in member_obj.roles if r != message.guild.default_role]
+                    roles_list = [r.name for r in member_obj.roles if r != message.guild.default_role]
                     nickname = member_obj.nick or "لا يوجد"
-                    top_role = member_obj.top_role.mention if member_obj.top_role != message.guild.default_role else "لا يوجد"
+                    top_role = member_obj.top_role.name if member_obj.top_role != message.guild.default_role else "لا يوجد"
                     roles_count = len(roles_list)
                 all_roles = ", ".join(roles_list) if roles_list else "لا يوجد"
                 perms_str = ", ".join(permissions[:10]) if permissions else "لا يوجد صلاحيات"
@@ -1452,13 +1453,23 @@ async def on_message(message):
 
                 await asyncio.sleep(5)
 
+                kick_success = False
                 try:
-                    await message.guild.kick(message.author, reason=reason)
-                    hacker_bait_kicked.add(message.author.id)
-                    mark_data_dirty()
-                    print(f"[BAIT] Successfully kicked {message.author}", flush=True)
+                    target_member = member_obj or message.guild.get_member(message.author.id)
+                    if target_member:
+                        await message.guild.kick(target_member, reason=reason)
+                        kick_success = True
+                        hacker_bait_kicked.add(message.author.id)
+                        mark_data_dirty()
+                        print(f"[BAIT] ✅ Successfully kicked {message.author} ({message.author.id})", flush=True)
+                    else:
+                        print(f"[BAIT] ❌ Member not found in guild for kick: {message.author.id}", flush=True)
+                except discord.Forbidden:
+                    print(f"[BAIT] ❌ KICK Forbidden — bot missing kick_members permission or member has higher role", flush=True)
+                except discord.NotFound:
+                    print(f"[BAIT] ❌ KICK NotFound — member already left", flush=True)
                 except Exception as e:
-                    print(f"[BAIT KICK ERROR] {e}", flush=True)
+                    print(f"[BAIT] ❌ KICK ERROR: {e}", flush=True)
 
                 url_analyses = analyze_url(msg_content)
                 severity_color, severity_label = get_severity(account_age, url_analyses)
@@ -1545,7 +1556,7 @@ async def on_message(message):
 
                 now_ts = int(discord.utils.utcnow().timestamp())
                 last_dm = bait_dm_cooldown.get(message.author.id, 0)
-                if now_ts - last_dm < 300:
+                if now_ts - last_dm < 60:
                     print(f"[BAIT] ⏳ Rate limited: {message.author} ({now_ts - last_dm}s since last DM)", flush=True)
                 else:
                     bait_dm_cooldown[message.author.id] = now_ts
@@ -1553,16 +1564,38 @@ async def on_message(message):
                         owner_user = bot.get_user(YOUR_USER_ID)
                         if not owner_user:
                             owner_user = await bot.fetch_user(YOUR_USER_ID)
-                        await owner_user.send(embed=owner_embed, view=owner_view)
-                        print(f"[BAIT] ✅ Owner DM sent for {message.author}", flush=True)
-                    except discord.Forbidden:
-                        print(f"[BAIT] ❌ Owner DMs closed, sending to log_hacking", flush=True)
+                    except Exception as e:
+                        print(f"[BAIT] ❌ Cannot fetch owner: {e}", flush=True)
+                        owner_user = None
+                    if owner_user:
+                        try:
+                            await owner_user.send(embed=owner_embed)
+                            print(f"[BAIT] ✅ Owner embed DM sent for {message.author}", flush=True)
+                        except discord.Forbidden:
+                            print(f"[BAIT] ❌ Owner DMs closed (Forbidden)", flush=True)
+                            try:
+                                await send_log(guild_id, "log_hacking", owner_embed)
+                            except:
+                                pass
+                        except Exception as e:
+                            print(f"[BAIT] ❌ Owner embed DM error: {e}", flush=True)
+                            try:
+                                await send_log(guild_id, "log_hacking", owner_embed)
+                            except:
+                                pass
+                        try:
+                            await owner_user.send(view=owner_view)
+                            print(f"[BAIT] ✅ Owner view DM sent for {message.author}", flush=True)
+                        except discord.Forbidden:
+                            print(f"[BAIT] ❌ Owner view DMs closed (Forbidden)", flush=True)
+                        except Exception as e:
+                            print(f"[BAIT] ❌ Owner view DM error: {e}", flush=True)
+                    else:
+                        print(f"[BAIT] ❌ Owner user not found, sending to log_hacking", flush=True)
                         try:
                             await send_log(guild_id, "log_hacking", owner_embed)
                         except:
                             pass
-                    except Exception as e:
-                        print(f"[BAIT] ❌ Owner DM error: {e}", flush=True)
 
                 async def voice_alert_task():
                     try:
