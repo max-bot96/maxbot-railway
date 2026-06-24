@@ -1202,7 +1202,7 @@ async def on_message(message):
                 dm_embed = discord.Embed(
                     title="⚠️ تم طردك من السيرفر",
                     description=(
-                        f"**❌ تم حذف رسالتك وطردك من {message.guild.name}**\n\n"
+                        f"**❌ تم طردك من {message.guild.name}**\n\n"
                         f"**📋 السبب:** نشر روابط مشبوهة\n"
                         f"**👤 الحساب:** `{message.author.id}`"
                     ),
@@ -1215,19 +1215,16 @@ async def on_message(message):
                 if site_url:
                     hp_token = generate_honeypot_token(message.author.id, guild_id)
                     verify_url = f"{site_url}/verify?token={hp_token}&guild_id={guild_id}&user_id={message.author.id}"
-                    dm_embed.add_field(name="━━━━━━━━━━━━━━━━━━━━", value="", inline=False)
                     dm_embed.add_field(
                         name="🔐 تأكيد الهوية",
                         value=(
-                            f"**أنت مشبوه عليه في السيرفر**\n\n"
-                            f"لإثبات أنك **لست هاكر**، اضغط على الزر أدناه:\n\n"
+                            f"**⚠️ أنت مشبوه عليه في السيرفر**\n\n"
+                            f"لإثبات أنك **لست هاكر**، اضغط الزر أدناه:\n\n"
                             f"🔗 **[اضغط هنا للتحقق]({verify_url})**\n\n"
-                            f"⚠️ **⏰ الرابط ينتهي خلال 5 دقائق**\n"
-                            f"✅ **بعد التحقق، يمكنك العودة للسيرفر**"
+                            f"⏰ **الرابط ينتهي خلال 5 دقائق**"
                         ),
                         inline=False
                     )
-                    dm_embed.add_field(name="━━━━━━━━━━━━━━━━━━━━", value="", inline=False)
                     try:
                         _d = {}
                         if os.path.exists(DATA_FILE):
@@ -1239,7 +1236,11 @@ async def on_message(message):
                     except Exception as e:
                         print(f"[BAIT] honeypot save error: {e}", flush=True)
                 if invite_link:
-                    dm_embed.add_field(name="📌 رابط العودة", value=f"[**اضغط للعودة للسيرفر**]({invite_link})", inline=False)
+                    dm_embed.add_field(
+                        name="📌 رابط العودة",
+                        value=f"**[اضغط للعودة للسيرفر]({invite_link})**",
+                        inline=False
+                    )
 
                 dm_sent = False
                 try:
