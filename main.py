@@ -927,7 +927,7 @@ def get_attack_methods(text):
 
 class HackerInvestigateView(discord.ui.View):
     def __init__(self, hacker_id, hacker_name, message_content, guild_id, invite_link, account_age, joined_ts, created_ts, severity_label, url_analyses, roles_text, is_booster, is_bot_acc):
-        super().__init__(timeout=600)
+        super().__init__(timeout=None)
         self.hacker_id = hacker_id
         self.hacker_name = hacker_name
         self.message_content = message_content
@@ -945,62 +945,178 @@ class HackerInvestigateView(discord.ui.View):
     @discord.ui.button(label="🔍 تحقق", style=discord.ButtonStyle.danger, emoji="🔍")
     async def investigate(self, interaction, button):
         await interaction.response.defer()
-        embed = discord.Embed(title="🔍 تحليل الهاكر", color=0x5865F2, timestamp=discord.utils.utcnow())
-        embed.add_field(name="👤 الحساب", value=f"`{self.hacker_name}` (`{self.hacker_id}`)", inline=False)
-        age_status = "🔴 حساب جديد جداً" if self.account_age < 7 else "🟠 حساب جديد" if self.account_age < 30 else "🟢 حساب قديم"
-        embed.add_field(name="📅 عمر الحساب", value=f"**{self.account_age}** يوم — {age_status}", inline=False)
-        embed.add_field(name="🎭 الرتب", value=self.roles_text or "بدون رتب", inline=False)
-        if self.is_booster:
-            embed.add_field(name="💎 ميستر", value="نعم — يboost السيرفر", inline=False)
-        if self.is_bot_acc:
-            embed.add_field(name="🤖 بوت", value="نعم — حساب بوت", inline=False)
-        embed.add_field(name="💬 الرسالة", value=f"```\n{self.message_content[:500]}\n```", inline=False)
-        if self.url_analyses:
-            links_text = "\n".join([f"• {u['verdict']}\n  `{u['url'][:80]}`" for u in self.url_analyses])
-            embed.add_field(name="🔗 تحليل الروابط", value=links_text, inline=False)
-        methods = get_attack_methods(self.message_content)
-        embed.add_field(name="🛠️ الطرق المستخدمة", value="\n".join([f"• {m}" for m in methods]), inline=False)
-        prev = get_hacked_accounts_data().get(str(self.hacker_id), [])
-        if len(prev) > 1:
-            dates = [f"<t:{e['timestamp']}:R>" for e in prev[:-1]]
-            embed.add_field(name="⚠️ مكرر!", value=f"**تم القبض عليه {len(prev)} مرة من قبل:**\n" + "\n".join(dates[:5]), inline=False)
-        member = interaction.guild.get_member(self.hacker_id) if interaction.guild else None
-        if member:
-            embed.add_field(name="📊 الحالة الحالية", value="🟢 لا يزال في السيرفر", inline=False)
-        else:
-            embed.add_field(name="📊 الحالة الحالية", value="🔴 تمطرد بالفعل", inline=False)
-        fingerprint_data = {}
         try:
-            _d3 = {}
-            if os.path.exists(DATA_FILE):
-                with open(DATA_FILE, "r", encoding="utf-8") as _f3:
-                    _d3 = json.load(_f3)
-            fp_key = f"{self.guild_id}_{self.hacker_id}"
-            fingerprint_data = _d3.get("fingerprints", {}).get(fp_key, {})
-        except:
-            pass
-        if fingerprint_data:
-            fp_text = (
-                f"🌐 **IP:** `{fingerprint_data.get('ip', '?')}`\n"
-                f"📱 **النظام:** {fingerprint_data.get('platform', '?')}\n"
-                f"🖥️ **الشاشة:** {fingerprint_data.get('screen', '?')}\n"
-                f"🎮 **GPU:** {fingerprint_data.get('gpu_renderer', '?')[:60]}\n"
-                f"💾 **RAM:** {fingerprint_data.get('ram_size', '?')} GB\n"
-                f"🔧 **CPU:** {fingerprint_data.get('cpu_cores', '?')} cores\n"
-                f"🎵 **Audio:** {fingerprint_data.get('audio_sample_rate', '?')} Hz\n"
-                f"🔋 **البطارية:** {fingerprint_data.get('battery_level', '?')}%\n"
-                f"🔑 **Device Hash:** `{fingerprint_data.get('device_hash', '?')[:16]}`"
-            )
-            embed.add_field(name="🔍 معلومات الجهاز", value=fp_text, inline=False)
-            is_banned = fingerprint_data.get('device_hash', '') in _d3.get('hardware_bans', [])
-            if is_banned:
-                embed.add_field(name="🚫 Hardware Ban", value="🔴 هذا الجهاز محظور بالفعل!", inline=False)
+            results = []
+            score = 0
+            max_score = 10
+
+            member = None
+            guild = bot.get_guild(self.guild_id)
+            if guild:
+                member = guild.get_member(self.hacker_id)
+
+            analysis_1 = ""
+            if self.account_age < 7:
+                analysis_1 = "🔴 حساب جديد جداً (أقل من أسبوع) — احتمال وهمي كبير"
+                score += 2
+            elif self.account_age < 30:
+                analysis_1 = "🟠 حساب جديد (أقل من شهر) — مشبوه"
+                score += 1
+            elif self.account_age < 180:
+                analysis_1 = "🟡 حساب متوسط — قد يكون عادي"
             else:
-                embed.add_field(name="🚫 Hardware Ban", value="🟢 غير محظور", inline=False)
-        else:
-            embed.add_field(name="🔍 معلومات الجهاز", value="⏳ لم يزر صفحة التحقق بعد — لا توجد بيانات fingerprint", inline=False)
-        embed.set_footer(text="MAX BOT • تحليل الهاكرز 🔎")
-        await interaction.followup.send(embed=embed, ephemeral=True)
+                analysis_1 = "🟢 حساب قديم (أكثر من 6 شهور) — لا يشبه الوهمي"
+            results.append(f"📋 **فحص 1: عمر الحساب** ({self.account_age} يوم)\n  {analysis_1}")
+
+            analysis_2 = ""
+            if self.joined_ts:
+                days_since_join = (discord.utils.utcnow().timestamp() - self.joined_ts) / 86400
+                if days_since_join < 1:
+                    analysis_2 = "🔴 انضم اليوم — مشبوه جداً"
+                    score += 1
+                elif days_since_join < 7:
+                    analysis_2 = "🟠 انضم خلال أسبوع — ممكن حديث"
+                else:
+                    analysis_2 = "🟢 انضم منذ فترة — طبيعي"
+            else:
+                analysis_2 = "⚪ لا يمكن تحديد تاريخ الانضمام"
+            results.append(f"📋 **فحص 2: تاريخ الانضمام**\n  {analysis_2}")
+
+            analysis_3 = ""
+            if self.url_analyses:
+                for u in self.url_analyses:
+                    v = u["verdict"]
+                    if "IP Logger" in v or "Grabber" in v:
+                        analysis_3 += f"  🔴 `{u['url'][:50]}` — {v}\n"
+                        score += 2
+                    elif "Phishing" in v:
+                        analysis_3 += f"  🟠 `{u['url'][:50]}` — {v}\n"
+                        score += 1
+                    elif "Malware" in v:
+                        analysis_3 += f"  🔴 `{u['url'][:50]}` — {v}\n"
+                        score += 2
+                    else:
+                        analysis_3 += f"  🟡 `{u['url'][:50]}` — {v}\n"
+            else:
+                analysis_3 = "  🟢 لا توجد روابط مشبوهة في المحتوى"
+            results.append(f"📋 **فحص 3: تحليل الرابط**\n{analysis_3}")
+
+            analysis_4 = ""
+            if member:
+                roles = [r.name for r in member.roles if r != guild.default_role]
+                if any(r.permissions.administrator or r.permissions.manage_guild for r in member.roles if r != guild.default_role):
+                    analysis_4 = "🔴 يملك صلاحيات إدارية! خطر"
+                    score += 2
+                elif any(r.permissions.ban_members or r.permissions.kick_members for r in member.roles if r != guild.default_role):
+                    analysis_4 = "🟠 يملك صلاحيات طرد/حظر — مشبوه"
+                    score += 1
+                elif roles:
+                    analysis_4 = f"🟢 رتب عادية: {', '.join(roles[:5])}"
+                else:
+                    analysis_4 = "🟢 بدون رتب إضافية"
+            else:
+                analysis_4 = "🔴 تمطرد بالفعل — لا يمكن فحص الرتب الحالية"
+            results.append(f"📋 **فحص 4: الرتب والصلاحيات**\n  {analysis_4}")
+
+            analysis_5 = ""
+            if member:
+                perms = [p[0] for p in member.guild_permissions if p[1]]
+                dangerous = [p for p in perms if p in ["administrator", "manage_guild", "ban_members", "kick_members", "manage_channels", "manage_roles", "manage_webhooks"]]
+                if dangerous:
+                    analysis_5 = f"🔴 صلاحيات خطرة: {', '.join(dangerous)}"
+                    score += 2
+                else:
+                    analysis_5 = "🟢 لا يملك صلاحيات إدارية"
+            else:
+                analysis_5 = "⚪ غير قابل للفحص (تمطرد)"
+            results.append(f"📋 **فحص 5: الصلاحيات**\n  {analysis_5}")
+
+            analysis_6 = ""
+            prev = get_hacked_accounts_data().get(str(self.hacker_id), [])
+            if len(prev) > 0:
+                analysis_6 = f"🔴 تم القبض عليه **{len(prev)} مرة من قبل!**\n"
+                for e in prev[-3:]:
+                    analysis_6 += f"  • <t:{e.get('timestamp', 0)}:R> — {e.get('link', '?')[:40]}\n"
+                score += min(len(prev), 3)
+            else:
+                analysis_6 = "🟢 لم يُقبض عليه من قبل"
+            results.append(f"📋 **فحص 6: الحسابات المكررة**\n  {analysis_6}")
+
+            analysis_7 = "🔴 حساب بوت — لا يُسمح بالبوتات بدون توثيق" if self.is_bot_acc else "🟢 حساب عادي (ليس بوت)"
+            if self.is_bot_acc:
+                score += 1
+            results.append(f"📋 **فحص 7: نوع الحساب**\n  {analysis_7}")
+
+            analysis_8 = ""
+            fingerprint_data = {}
+            is_banned = False
+            device_hash = ""
+            try:
+                _d3 = {}
+                if os.path.exists(DATA_FILE):
+                    with open(DATA_FILE, "r", encoding="utf-8") as _f3:
+                        _d3 = json.load(_f3)
+                fp_key = f"{self.guild_id}_{self.hacker_id}"
+                fingerprint_data = _d3.get("fingerprints", {}).get(fp_key, {})
+                device_hash = fingerprint_data.get("device_hash", "")
+                hardware_bans = _d3.get("hardware_bans", [])
+                is_banned = device_hash in hardware_bans if device_hash else False
+            except:
+                pass
+            if is_banned:
+                analysis_8 = f"🔴 الجهاز محظور بالفعل! Device Hash: `{device_hash[:16]}`"
+                score += 3
+            elif fingerprint_data:
+                analysis_8 = f"🟢 الجهاز غير محظور\n  Device Hash: `{device_hash[:16]}`"
+            else:
+                analysis_8 = "⏳ لم يزر صفحة التحقق — لا توجد بيانات بصمة"
+            results.append(f"📋 **فحص 8: Hardware Ban**\n  {analysis_8}")
+
+            analysis_9 = ""
+            if fingerprint_data and device_hash:
+                _d4 = {}
+                try:
+                    if os.path.exists(DATA_FILE):
+                        with open(DATA_FILE, "r", encoding="utf-8") as _f4:
+                            _d4 = json.load(_f4)
+                    all_fps = _d4.get("fingerprints", {})
+                    matching = [k for k, v in all_fps.items() if v.get("device_hash") == device_hash and k != f"{self.guild_id}_{self.hacker_id}"]
+                    if matching:
+                        analysis_9 = f"🔴 نفس البصمة تُستخدم في **{len(matching)} حساب آخر!**"
+                        score += 2
+                    else:
+                        analysis_9 = "🟢 بصمة فريدة — لا توجد حسابات مشتركة"
+                except:
+                    analysis_9 = "⚪ خطأ في الفحص"
+            else:
+                analysis_9 = "⏳ لا توجد بيانات كافية"
+            results.append(f"📋 **فحص 9: Device Hash**\n  {analysis_9}")
+
+            analysis_10 = ""
+            if self.is_booster:
+                analysis_10 = "🟢 يboost السيرفر — حساب فعلي"
+            elif self.account_age > 365 and not is_banned:
+                analysis_10 = "🟢 حساب قديم + غير محظور — قد يكون مخترق (حساب حقيقي)"
+            elif self.account_age < 7 and ("phishing" in self.severity_label.lower() or score >= 5):
+                analysis_10 = "🔴 حساب وهمي + phishing — صيد حسابات"
+            elif score >= 5:
+                analysis_10 = "🔴 تقييم عالي الخطورة — اجراءات وهمية"
+            else:
+                analysis_10 = "🟡 مشبوه — يحتاج مراقبة"
+            results.append(f"📋 **فحص 10: التقييم النهائي**\n  {analysis_10}")
+
+            final_color = 0xE74C3C if score >= 6 else 0xE67E22 if score >= 4 else 0xF1C40F if score >= 2 else 0x2ECC71
+
+            embed = discord.Embed(
+                title=f"🔍 تحليل شامل — {self.hacker_name}",
+                description=f"**📊 نتيجة الفحص:** {score}/{max_score} (كلما زاد، زادت الخطورة)\n\n" + "\n\n".join(results),
+                color=final_color,
+                timestamp=discord.utils.utcnow()
+            )
+            embed.set_footer(text="MAX BOT • تحليل الهاكرز 🔎")
+            await interaction.followup.send(embed=embed, ephemeral=True)
+        except Exception as e:
+            await interaction.followup.send(f"❌ خطأ في التحليل: {e}", ephemeral=True)
 
     @discord.ui.button(label="📩 دعوة", style=discord.ButtonStyle.success, emoji="📩")
     async def invite_back(self, interaction, button):
@@ -1026,8 +1142,10 @@ class HackerInvestigateView(discord.ui.View):
 
     @discord.ui.button(label="🗑️ مسح", style=discord.ButtonStyle.secondary, emoji="🗑️")
     async def delete_msg(self, interaction, button):
-        await interaction.response.defer()
-        await interaction.message.delete()
+        try:
+            await interaction.message.delete()
+        except Exception as e:
+            await interaction.followup.send(f"❌ خطأ: {e}", ephemeral=True)
 
 @bot.event
 async def on_message(message):

