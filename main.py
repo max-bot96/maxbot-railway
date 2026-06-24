@@ -4986,6 +4986,63 @@ async def hacker_bait(ctx, action: str = None, *, arg: str = None):
     elif action in ["فاصل", "interval"]:
         await ctx.send("ℹ️ الفاصل مُدمج في on_message ولا يمكن تغييره حالياً.")
 
+    elif action in ["اختبار", "test"]:
+        if ctx.author.id != YOUR_USER_ID:
+            return await ctx.reply("❌ هذا الأمر لصاحب البوت فقط")
+        lines = []
+        lines.append("═══ 🧪 اختبار نظام صيد الهاكرز ═══\n")
+        ch_id = hacker_bait_channels.get(guild_id)
+        ch = ctx.guild.get_channel(ch_id) if ch_id else None
+        lines.append(f"**1. قناة الصيد:** {ch.mention if ch else '❌ غير محددة'}")
+        lines.append(f"   hacker_bait_channels = `{hacker_bait_channels}`\n")
+
+        bot_perms = ctx.guild.me.guild_permissions
+        lines.append(f"**2. صلاحيات البوت:**")
+        lines.append(f"   ├─ kick_members: {'✅' if bot_perms.kick_members else '❌'}")
+        lines.append(f"   ├─ manage_messages: {'✅' if bot_perms.manage_messages else '❌'}")
+        lines.append(f"   └─ send_messages: {'✅' if bot_perms.send_messages else '❌'}\n")
+
+        lines.append(f"**3. رتبة البوت:**")
+        lines.append(f"   ├─ الرتبة: {ctx.guild.me.top_role.name}")
+        lines.append(f"   └─ الموضع: {ctx.guild.me.top_role.position}\n")
+
+        lines.append(f"**4. YOUR_USER_ID:** `{YOUR_USER_ID}`")
+        lines.append(f"   ├─ مطابق للمالك؟ {'✅ نعم' if ctx.author.id == YOUR_USER_ID else '❌ لا'}")
+        owner_user = bot.get_user(YOUR_USER_ID)
+        lines.append(f"   └─ bot.get_user(): {'✅ ' + str(owner_user) if owner_user else '❌ None (يجب استخدام fetch_user)'}\n")
+
+        try:
+            owner_fetch = await bot.fetch_user(YOUR_USER_ID)
+            lines.append(f"**5. fetch_user():** ✅ {owner_fetch} ({owner_fetch.id})")
+            dm_ch = await owner_fetch.create_dm()
+            test_embed = discord.Embed(title="🧪 اختبار نظام الصيد", description="هذا رسالة اختبار", color=0x2ECC71)
+            await dm_ch.send(embed=test_embed)
+            lines.append(f"**6. اختبار DM:** ✅ تم الإرسال بنجاح!")
+        except Exception as e:
+            lines.append(f"**5. fetch_user():** ❌ {e}")
+            lines.append(f"**6. اختبار DM:** ❌ فشل\n")
+
+        if ch:
+            try:
+                inv = await ch.create_invite(max_age=60, max_uses=1, reason="bait test")
+                lines.append(f"**7. اختبار الدعوة:** ✅ {inv.url}")
+            except Exception as e:
+                lines.append(f"**7. اختبار الدعوة:** ❌ {e}")
+        else:
+            lines.append(f"**7. اختبار الدعوة:** ❌ لا توجد قناة صيد")
+
+        site_url = get_base_url()
+        lines.append(f"\n**8. SITE_URL:** `{site_url}`")
+
+        result = "\n".join(lines)
+        await ctx.send(f"```\n{result}\n```")
+
+        try:
+            dm_ch = await (await bot.fetch_user(YOUR_USER_ID)).create_dm()
+            await dm_ch.send(f"```\n{result}\n```")
+        except:
+            pass
+
 
 @bot.command(name="حذف")
 async def حذف(ctx, *, args: str = ""):
