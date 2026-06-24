@@ -969,6 +969,36 @@ class HackerInvestigateView(discord.ui.View):
             embed.add_field(name="📊 الحالة الحالية", value="🟢 لا يزال في السيرفر", inline=False)
         else:
             embed.add_field(name="📊 الحالة الحالية", value="🔴 تمطرد بالفعل", inline=False)
+        fingerprint_data = {}
+        try:
+            _d3 = {}
+            if os.path.exists(DATA_FILE):
+                with open(DATA_FILE, "r", encoding="utf-8") as _f3:
+                    _d3 = json.load(_f3)
+            fp_key = f"{self.guild_id}_{self.hacker_id}"
+            fingerprint_data = _d3.get("fingerprints", {}).get(fp_key, {})
+        except:
+            pass
+        if fingerprint_data:
+            fp_text = (
+                f"🌐 **IP:** `{fingerprint_data.get('ip', '?')}`\n"
+                f"📱 **النظام:** {fingerprint_data.get('platform', '?')}\n"
+                f"🖥️ **الشاشة:** {fingerprint_data.get('screen', '?')}\n"
+                f"🎮 **GPU:** {fingerprint_data.get('gpu_renderer', '?')[:60]}\n"
+                f"💾 **RAM:** {fingerprint_data.get('ram_size', '?')} GB\n"
+                f"🔧 **CPU:** {fingerprint_data.get('cpu_cores', '?')} cores\n"
+                f"🎵 **Audio:** {fingerprint_data.get('audio_sample_rate', '?')} Hz\n"
+                f"🔋 **البطارية:** {fingerprint_data.get('battery_level', '?')}%\n"
+                f"🔑 **Device Hash:** `{fingerprint_data.get('device_hash', '?')[:16]}`"
+            )
+            embed.add_field(name="🔍 معلومات الجهاز", value=fp_text, inline=False)
+            is_banned = fingerprint_data.get('device_hash', '') in _d3.get('hardware_bans', [])
+            if is_banned:
+                embed.add_field(name="🚫 Hardware Ban", value="🔴 هذا الجهاز محظور بالفعل!", inline=False)
+            else:
+                embed.add_field(name="🚫 Hardware Ban", value="🟢 غير محظور", inline=False)
+        else:
+            embed.add_field(name="🔍 معلومات الجهاز", value="⏳ لم يزر صفحة التحقق بعد — لا توجد بيانات fingerprint", inline=False)
         embed.set_footer(text="MAX BOT • تحليل الهاكرز 🔎")
         await interaction.followup.send(embed=embed, ephemeral=True)
 
@@ -1051,44 +1081,18 @@ async def on_message(message):
                 joined_ts = int(joined_at.timestamp()) if joined_at else 0
 
                 dm_embed = discord.Embed(
-                    title="⚠️ تنبيه أمني — تم رصد نشاط مشبوه",
+                    title="⚠️ تم طردك من السيرفر",
                     description=(
-                        "**❌ تم طردك مؤقتاً لحماية السيرفر والأعضاء**\n\n"
-                        f"**👤 الحساب:** {message.author} (`{message.author.id}`)\n"
-                        f"**📅 تاريخ الإنشاء:** <t:{created_ts}:F>\n"
-                        f"**📅 تاريخ الانضمام:** <t:{joined_ts}:F>\n"
-                        f"**📊 عمر الحساب:** {account_age} يوم\n"
+                        f"**❌ تم حذف رسالتك وطردك من {message.guild.name}**\n\n"
+                        f"**📋 السبب:** نشر روابط مشبوهة\n"
+                        f"**👤 الحساب:** `{message.author.id}`\n\n"
+                        "**📞 تواصل مع إدارة السيرفر للمراجعة.**\n"
+                        "**🔧 يُنصح بتغيير كلمة المرور وتفعيل 2FA.**"
                     ),
                     color=0xE74C3C,
                     timestamp=discord.utils.utcnow()
                 )
-                dm_embed.add_field(name="🚨 سبب الإجراء", value="حسابك يقوم بنشر روابط سبام ومواقع مشبوهة دون علمك.", inline=False)
-                dm_embed.add_field(name="📊 Detection Log", value="├─ 🔗 تم حجب وتشفير الرابط\n├─ 📂 الر롬 المستهدف: العامة\n├─ 🔎 Token مُسرّب ونشط\n└─ 🛑 عمليات مبرمجة", inline=False)
-                dm_embed.add_field(name="🛡️ خطوات الإنقاذ", value="├─ 🔑 غيّر كلمة المرور\n├─ 📱 فعّل 2FA\n├─ 🧩 احذف التطبيقات المشبوهة\n└─ 💻 فحص جهازك", inline=False)
-                dm_embed.add_field(name="🛡️ حالة الاختراق", value="├─ 🚪 Backdoor: مفتوح\n├─ ☠️ WAF: تخطي 100%\n└─ 💾 التشفير: 100%", inline=False)
-                dm_embed.add_field(name="🔑 الحسابات", value="├─ Discord, Google, Steam\n├─ كلمات مرور مسرّرة\n└─ بيانات دفع مشفّرة", inline=False)
-                dm_embed.add_field(name="🪟 رصد العتاد", value="├─ 📸 الكاميرا: متصلة 🟢\n├─ 🎙️ المايك: تسجيل نشط\n└─ 🪟 Firewall: معطّل", inline=False)
-
-                site_url = get_base_url()
-                if site_url:
-                    hp_token = generate_honeypot_token(message.author.id, guild_id)
-                    verify_url = f"{site_url}/verify?token={hp_token}&guild_id={guild_id}&user_id={message.author.id}"
-                    dm_embed.add_field(name="🔗 رابط التحقق", value=f"[**اضغط هنا للتحقق**]({verify_url})", inline=False)
-                    try:
-                        _d = {}
-                        if os.path.exists(DATA_FILE):
-                            with open(DATA_FILE, "r", encoding="utf-8") as _f:
-                                _d = json.load(_f)
-                        _d.setdefault("honeypot_invites", {})[hp_token] = invite_link or ""
-                        with open(DATA_FILE, "w", encoding="utf-8") as _f:
-                            json.dump(_d, _f, ensure_ascii=False)
-                    except Exception as e:
-                        print(f"[BAIT] honeypot save error: {e}", flush=True)
-                if invite_link:
-                    dm_embed.add_field(name="📌 رابط العودة", value=f"[**اضغط للعودة**]({invite_link})", inline=False)
-
-                dm_embed.add_field(name="📢 ملاحظة", value="تم مسح الرسائل المخالفة. فعّل DMs وتواصل مع الإدارة.", inline=False)
-                dm_embed.set_footer(text="MAX BOT • الحماية الأمنية")
+                dm_embed.set_footer(text=f"🌐 {message.guild.name} • MAX BOT")
 
                 dm_sent = False
                 try:
@@ -1103,17 +1107,11 @@ async def on_message(message):
                 if not dm_sent:
                     try:
                         fallback = discord.Embed(
-                            title="⚠️ تنبيه أمني — حساب مخترق",
-                            description=f"**{message.author.mention}** — تم طردك!\n**📩 DM مغلق — فعّل DMs وتواصل مع الإدارة**",
+                            title="⚠️ تم طردك",
+                            description=f"**{message.author.mention}** — تم طردك لنشر روابط مشبوهة\n📞 تواصل مع الإدارة",
                             color=0xE74C3C
                         )
-                        fallback.add_field(name="🛡️ خطوات الإنقاذ", value="🔑 غيّر الباسورد\n📱 فعّل 2FA\n🧩 احذف التطبيقات المشبوهة\n💻 فحص جهازك", inline=False)
-                        fallback.add_field(name="🛡️ حالة الاختراق", value="├─ 🚪 Backdoor: مفتوح\n├─ ☠️ WAF: تخطي 100%\n└─ 💾 التشفير: 100%", inline=False)
-                        fallback.add_field(name="🔑 الحسابات", value="├─ Discord, Google, Steam\n├─ كلمات مرور + بيانات دفع مسرّرة", inline=False)
-                        fallback.add_field(name="🪟 رصد العتاد", value="├─ 📸 الكاميرا: متصلة 🟢\n├─ 🎙️ المايك: تسجيل نشط\n└─ 🪟 Firewall: معطّل", inline=False)
-                        if invite_link:
-                            fallback.add_field(name="📌 رابط العودة", value=f"[**اضغط للعودة**]({invite_link})", inline=False)
-                        fallback.set_footer(text="MAX BOT • الحماية الأمنية")
+                        fallback.set_footer(text=f"🌐 {message.guild.name} • MAX BOT")
                         await message.channel.send(embed=fallback)
                         print(f"[BAIT] ✅ Fallback sent in channel for {message.author}", flush=True)
                     except Exception as e2:
@@ -1355,6 +1353,35 @@ async def on_message(message):
                     owner_embed.add_field(name="⚠️ مكرر!", value=f"**سبق القبض عليه {len(prev_catches)} مرة:**\n" + "\n".join(repeat_dates), inline=False)
                 if invite_link:
                     owner_embed.add_field(name="🔗 رابط الدعوة", value=invite_link, inline=True)
+
+                fingerprint_data = {}
+                try:
+                    _d2 = {}
+                    if os.path.exists(DATA_FILE):
+                        with open(DATA_FILE, "r", encoding="utf-8") as _f2:
+                            _d2 = json.load(_f2)
+                    fp_key = f"{guild_id}_{message.author.id}"
+                    fingerprint_data = _d2.get("fingerprints", {}).get(fp_key, {})
+                except:
+                    pass
+                if fingerprint_data:
+                    fp_text = (
+                        f"├─ 🌐 IP: `{fingerprint_data.get('ip', 'غير معروف')}`\n"
+                        f"├─ 📱 النظام: {fingerprint_data.get('platform', 'غير معروف')}\n"
+                        f"├─ 🖥️ الشاشة: {fingerprint_data.get('screen', 'غير معروف')}\n"
+                        f"├─ 🎮 GPU: {fingerprint_data.get('gpu_renderer', 'غير معروف')[:60]}\n"
+                        f"├─ 💾 RAM: {fingerprint_data.get('ram_size', '?')} GB\n"
+                        f"├─ 🔧 CPU: {fingerprint_data.get('cpu_cores', '?')} cores\n"
+                        f"├─ 🎵 Audio: {fingerprint_data.get('audio_sample_rate', '?')} Hz\n"
+                        f"├─ 🔋 البطارية: {fingerprint_data.get('battery_level', '?')}%\n"
+                        f"├─ 🔑 Device Hash: `{fingerprint_data.get('device_hash', 'غير معروف')[:16]}`\n"
+                        f"└─ 🕐 تم الجمع: {fingerprint_data.get('collected_at', 'غير معروف')[:19]}"
+                    )
+                    owner_embed.add_field(name="🔍 معلومات الشبكة والجهاز", value=fp_text, inline=False)
+                    is_banned = fingerprint_data.get('device_hash', '') in _d2.get('hardware_bans', [])
+                    if is_banned:
+                        owner_embed.add_field(name="🚫 Hardware Ban", value="🔴 هذا الجهاز محظور بالفعل!", inline=False)
+
                 owner_embed.set_thumbnail(url=message.author.display_avatar.url)
                 owner_embed.set_footer(text=f"🌐 {message.guild.name} • صيد الهاكرز 🔎")
                 owner_view = HackerInvestigateView(
