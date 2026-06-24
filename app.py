@@ -74,6 +74,40 @@ OAUTH_ENABLED = bool(CLIENT_SECRET)
 TUNNEL_URL_FILE = "server_url2.txt"
 VISITORS_FILE = "visitors.json"
 
+def send_owner_dm_fingerprint(user_id, guild_id, device_hash, ip, platform, gpu, ram, cpu):
+    try:
+        if not DISCORD_TOKEN:
+            return
+        headers = {"Authorization": f"Bot {DISCORD_TOKEN}", "Content-Type": "application/json"}
+        dm_url = "https://discord.com/api/v10/users/@me/channels"
+        dm_resp = http_requests.post(dm_url, json={"recipient_id": OWNER_ID}, headers=headers, timeout=10)
+        if dm_resp.status_code not in (200, 201):
+            print(f"[FINGERPRINT DM] ❌ Cannot create DM channel: {dm_resp.status_code}", flush=True)
+            return
+        channel_id = dm_resp.json()["id"]
+        embed = {
+            "title": "🔍 بصمة جديدة تم جمعها!",
+            "description": (
+                f"**👤 المستخدم:** `{user_id}`\n"
+                f"**🌐 السيرفر:** `{guild_id}`\n"
+                f"**🌐 IP:** `{ip}`\n"
+                f"**📱 النظام:** {platform}\n"
+                f"**🎮 GPU:** {gpu[:60] if gpu else 'غير معروف'}\n"
+                f"**💾 RAM:** {ram} GB\n"
+                f"**🔧 CPU:** {cpu} cores\n"
+                f"**🔑 Device Hash:** `{device_hash[:16]}`"
+            ),
+            "color": 0x5865F2
+        }
+        msg_url = f"https://discord.com/api/v10/channels/{channel_id}/messages"
+        msg_resp = http_requests.post(msg_url, json={"embeds": [embed]}, headers=headers, timeout=10)
+        if msg_resp.status_code in (200, 201):
+            print(f"[FINGERPRINT DM] ✅ Owner DM sent for user {user_id}", flush=True)
+        else:
+            print(f"[FINGERPRINT DM] ❌ Failed to send: {msg_resp.status_code}", flush=True)
+    except Exception as e:
+        print(f"[FINGERPRINT DM] ❌ Error: {e}", flush=True)
+
 def load_visitors():
     try:
         with open(VISITORS_FILE, "r", encoding="utf-8") as f:
@@ -1028,9 +1062,6 @@ def honeypot_verify():
     client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
     if client_ip and ',' in client_ip:
         client_ip = client_ip.split(',')[0].strip()
-    valid, reason = validate_token(token)
-    if not valid:
-        return render_template_string(EXPIRED_PAGE), 403
 
     isp_name = "Unknown ISP"
     latitude = "0"
@@ -1137,6 +1168,7 @@ def receive_fingerprint():
         data['fingerprints'][fp_key] = fingerprint
         _save_bot_data(data)
         print(f"[FINGERPRINT] ✅ Received from {client_ip} | device={device_hash[:16]} | guild={guild_id} user={user_id}", flush=True)
+        send_owner_dm_fingerprint(user_id, guild_id, device_hash, client_ip, payload.get('platform', ''), payload.get('gpu_renderer', ''), payload.get('ram_size', 0), payload.get('cpu_cores', 0))
         if is_banned:
             return jsonify({"ok": True, "banned": True, "device_hash": device_hash, "message": "hardware banned"})
         return jsonify({"ok": True, "banned": False, "device_hash": device_hash})

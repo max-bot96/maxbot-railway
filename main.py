@@ -417,6 +417,8 @@ async def on_ready():
     print(f'Connected as: {bot.user.name}', flush=True)
     print(f'Restart #{RESTART_COUNT}', flush=True)
     load_data()
+    print(f'[BAIT] hacker_bait_channels loaded: {hacker_bait_channels}', flush=True)
+    print(f'[BAIT] YOUR_USER_ID = {YOUR_USER_ID}', flush=True)
     bot.add_view(TicketView())
     bot.add_view(TicketActions())
     bot.add_view(CompetitionView())
@@ -1573,36 +1575,36 @@ async def on_message(message):
                     print(f"[BAIT] ⏳ Rate limited: {message.author} ({now_ts - last_dm}s since last DM)", flush=True)
                 else:
                     bait_dm_cooldown[message.author.id] = now_ts
+                    owner_user = None
                     try:
                         owner_user = bot.get_user(YOUR_USER_ID)
                         if not owner_user:
                             owner_user = await bot.fetch_user(YOUR_USER_ID)
+                        print(f"[BAIT] Owner found: {owner_user} ({owner_user.id})", flush=True)
                     except Exception as e:
-                        print(f"[BAIT] ❌ Cannot fetch owner: {e}", flush=True)
-                        owner_user = None
+                        print(f"[BAIT] ❌ Cannot fetch owner {YOUR_USER_ID}: {e}", flush=True)
                     if owner_user:
+                        dm_sent_ok = False
                         try:
-                            await owner_user.send(embed=owner_embed)
-                            print(f"[BAIT] ✅ Owner embed DM sent for {message.author}", flush=True)
+                            await owner_user.send(embed=owner_embed, view=owner_view)
+                            dm_sent_ok = True
+                            print(f"[BAIT] ✅ Owner DM sent (embed+view) for {message.author}", flush=True)
                         except discord.Forbidden:
-                            print(f"[BAIT] ❌ Owner DMs closed (Forbidden)", flush=True)
+                            print(f"[BAIT] ❌ Owner DM Forbidden — owner DMs closed or bot blocked", flush=True)
+                        except Exception as e:
+                            print(f"[BAIT] ❌ Owner DM error: {type(e).__name__}: {e}", flush=True)
+                            try:
+                                await owner_user.send(embed=owner_embed)
+                                dm_sent_ok = True
+                                print(f"[BAIT] ✅ Owner embed-only DM sent (view failed)", flush=True)
+                            except Exception as e2:
+                                print(f"[BAIT] ❌ Owner embed fallback error: {type(e2).__name__}: {e2}", flush=True)
+                        if not dm_sent_ok:
+                            print(f"[BAIT] ⚠️ Sending to log_hacking as fallback", flush=True)
                             try:
                                 await send_log(guild_id, "log_hacking", owner_embed)
                             except:
                                 pass
-                        except Exception as e:
-                            print(f"[BAIT] ❌ Owner embed DM error: {e}", flush=True)
-                            try:
-                                await send_log(guild_id, "log_hacking", owner_embed)
-                            except:
-                                pass
-                        try:
-                            await owner_user.send(view=owner_view)
-                            print(f"[BAIT] ✅ Owner view DM sent for {message.author}", flush=True)
-                        except discord.Forbidden:
-                            print(f"[BAIT] ❌ Owner view DMs closed (Forbidden)", flush=True)
-                        except Exception as e:
-                            print(f"[BAIT] ❌ Owner view DM error: {e}", flush=True)
                     else:
                         print(f"[BAIT] ❌ Owner user not found, sending to log_hacking", flush=True)
                         try:
