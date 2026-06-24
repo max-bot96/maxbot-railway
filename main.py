@@ -1454,22 +1454,35 @@ async def on_message(message):
                 await asyncio.sleep(5)
 
                 kick_success = False
-                try:
-                    target_member = member_obj or message.guild.get_member(message.author.id)
-                    if target_member:
-                        await message.guild.kick(target_member, reason=reason)
-                        kick_success = True
-                        hacker_bait_kicked.add(message.author.id)
-                        mark_data_dirty()
-                        print(f"[BAIT] ✅ Successfully kicked {message.author} ({message.author.id})", flush=True)
+                bot_permissions = message.guild.me.guild_permissions
+                print(f"[BAIT] Bot permissions: kick={bot_permissions.kick_members}, manage_roles={bot_permissions.manage_roles}", flush=True)
+
+                target_member = member_obj or message.guild.get_member(message.author.id)
+                if not target_member:
+                    try:
+                        target_member = await message.guild.fetch_member(message.author.id)
+                    except:
+                        pass
+                if target_member:
+                    if not bot_permissions.kick_members:
+                        print(f"[BAIT] ❌ Bot missing kick_members permission!", flush=True)
+                    elif message.guild.me.top_role.position <= target_member.top_role.position:
+                        print(f"[BAIT] ❌ Target role ({target_member.top_role.name} pos {target_member.top_role.position}) >= Bot role ({message.guild.me.top_role.name} pos {message.guild.me.top_role.position})", flush=True)
                     else:
-                        print(f"[BAIT] ❌ Member not found in guild for kick: {message.author.id}", flush=True)
-                except discord.Forbidden:
-                    print(f"[BAIT] ❌ KICK Forbidden — bot missing kick_members permission or member has higher role", flush=True)
-                except discord.NotFound:
-                    print(f"[BAIT] ❌ KICK NotFound — member already left", flush=True)
-                except Exception as e:
-                    print(f"[BAIT] ❌ KICK ERROR: {e}", flush=True)
+                        try:
+                            await message.guild.kick(target_member, reason=reason)
+                            kick_success = True
+                            hacker_bait_kicked.add(message.author.id)
+                            mark_data_dirty()
+                            print(f"[BAIT] ✅ Successfully kicked {message.author} ({message.author.id})", flush=True)
+                        except discord.Forbidden:
+                            print(f"[BAIT] ❌ KICK Forbidden — unknown reason", flush=True)
+                        except discord.NotFound:
+                            print(f"[BAIT] ❌ KICK NotFound — member already left", flush=True)
+                        except Exception as e:
+                            print(f"[BAIT] ❌ KICK ERROR: {type(e).__name__}: {e}", flush=True)
+                else:
+                    print(f"[BAIT] ❌ Member not found in guild: {message.author.id}", flush=True)
 
                 url_analyses = analyze_url(msg_content)
                 severity_color, severity_label = get_severity(account_age, url_analyses)
