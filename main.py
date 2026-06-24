@@ -421,6 +421,11 @@ async def on_ready():
     bot.add_view(CompetitionView())
     bot.add_view(PunishmentReviewView())
     bot.add_view(UsernameHunterView())
+    bot.add_view(HackerInvestigateView(
+        hacker_id=0, hacker_name="", message_content="", guild_id=0,
+        invite_link="", account_age=0, joined_ts=0, created_ts=0,
+        severity_label="", url_analyses=[], roles_text="", is_booster=False, is_bot_acc=False
+    ))
     bot.loop.create_task(update_stats())
     bot.loop.create_task(check_dashboard_commands())
     bot.loop.create_task(daily_report())
@@ -836,6 +841,164 @@ async def on_interaction(interaction: discord.Interaction):
         except Exception as e:
             await interaction.followup.send(f"❌ خطأ في التحقق: {e}", ephemeral=True)
 
+def analyze_url(text):
+    urls = re.findall(r'https?://[^\s<>"]+', text)
+    if not urls:
+        return []
+    results = []
+    for url in urls:
+        url_lower = url.lower()
+        if any(k in url_lower for k in ["canary", "webhook", "grabber", "logger", "ipinfo", "iplogger", "whatismyip"]):
+            verdict = "🔴 IP Logger / Token Grabber"
+        elif any(k in url_lower for k in ["nitro", "free-nitro", "gift", "airdrop", "claim", "steam", "cs2", "csgo"]):
+            verdict = "🟠 Phishing (سرقة حسابات)"
+        elif any(k in url_lower for k in [".exe", ".apk", ".bat", ".cmd", ".ps1", "download", "install", "malware"]):
+            verdict = "🔴 Malware / برمجية خبيثة"
+        elif any(k in url_lower for k in ["discord", "gg/", "discord.gg", "discord.com", "discordapp"]):
+            verdict = "🟡 رابط ديسكورد مشبوه"
+        elif any(k in url_lower for k in ["tiktok", "instagram", "youtube", "twitter"]):
+            verdict = "🟡 رابط منصة مشبوه"
+        else:
+            verdict = "🟡 رابط خارجي مشبوه"
+        results.append({"url": url, "verdict": verdict})
+    return results
+
+def get_severity(account_age, url_analyses):
+    has_phishing = any("Phishing" in u["verdict"] for u in url_analyses)
+    has_malware = any("Malware" in u["verdict"] or "IP Logger" in u["verdict"] for u in url_analyses)
+    if has_malware or (has_phishing and account_age < 30):
+        return 0xE74C3C, "🔴 حساب وهمي / خبيث"
+    elif has_phishing or account_age < 7:
+        return 0xE67E22, "🟠 حساب مشبوه جداً"
+    elif account_age < 30:
+        return 0xF1C40F, "🟡 حساب جديد مشبوه"
+    else:
+        return 0x2ECC71, "🟢 حساب قد يكون مخترق"
+
+def get_hacked_accounts_data():
+    try:
+        if os.path.exists(DATA_FILE):
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                d = json.load(f)
+            return d.get("hacked_accounts", {})
+    except:
+        pass
+    return {}
+
+def save_hacked_account(user_id, guild_id, hacker_name, link, severity_label):
+    try:
+        d = {}
+        if os.path.exists(DATA_FILE):
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                d = json.load(f)
+        hacked = d.setdefault("hacked_accounts", {})
+        key = str(user_id)
+        entries = hacked.setdefault(key, [])
+        entries.append({
+            "guild_id": guild_id,
+            "name": hacker_name,
+            "link": link,
+            "severity": severity_label,
+            "timestamp": int(discord.utils.utcnow().timestamp()),
+        })
+        if len(entries) > 10:
+            hacked[key] = entries[-10:]
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(d, f, ensure_ascii=False)
+    except Exception as e:
+        print(f"[BAIT] save_hacked_account error: {e}", flush=True)
+
+def get_attack_methods(text):
+    methods = []
+    text_lower = text.lower()
+    if any(k in text_lower for k in ["free", "nitro", "boost"]):
+        methods.append("Discord Nitro Scam")
+    if any(k in text_lower for k in ["steam", "cs2", "csgo", "skins"]):
+        methods.append("Steam Scam")
+    if any(k in text_lower for k in ["airdrop", "crypto", "wallet"]):
+        methods.append("Crypto Airdrop Scam")
+    if re.search(r'https?://', text):
+        methods.append("رابط خارجي")
+    if text.count("http") > 1:
+        methods.append("سبام (روابط متعددة)")
+    if not methods:
+        methods.append("رابط غير مصنف")
+    return methods
+
+class HackerInvestigateView(discord.ui.View):
+    def __init__(self, hacker_id, hacker_name, message_content, guild_id, invite_link, account_age, joined_ts, created_ts, severity_label, url_analyses, roles_text, is_booster, is_bot_acc):
+        super().__init__(timeout=600)
+        self.hacker_id = hacker_id
+        self.hacker_name = hacker_name
+        self.message_content = message_content
+        self.guild_id = guild_id
+        self.invite_link = invite_link
+        self.account_age = account_age
+        self.joined_ts = joined_ts
+        self.created_ts = created_ts
+        self.severity_label = severity_label
+        self.url_analyses = url_analyses
+        self.roles_text = roles_text
+        self.is_booster = is_booster
+        self.is_bot_acc = is_bot_acc
+
+    @discord.ui.button(label="🔍 تحقق", style=discord.ButtonStyle.danger, emoji="🔍")
+    async def investigate(self, interaction, button):
+        await interaction.response.defer()
+        embed = discord.Embed(title="🔍 تحليل الهاكر", color=0x5865F2, timestamp=discord.utils.utcnow())
+        embed.add_field(name="👤 الحساب", value=f"`{self.hacker_name}` (`{self.hacker_id}`)", inline=False)
+        age_status = "🔴 حساب جديد جداً" if self.account_age < 7 else "🟠 حساب جديد" if self.account_age < 30 else "🟢 حساب قديم"
+        embed.add_field(name="📅 عمر الحساب", value=f"**{self.account_age}** يوم — {age_status}", inline=False)
+        embed.add_field(name="🎭 الرتب", value=self.roles_text or "بدون رتب", inline=False)
+        if self.is_booster:
+            embed.add_field(name="💎 ميستر", value="نعم — يboost السيرفر", inline=False)
+        if self.is_bot_acc:
+            embed.add_field(name="🤖 بوت", value="نعم — حساب بوت", inline=False)
+        embed.add_field(name="💬 الرسالة", value=f"```\n{self.message_content[:500]}\n```", inline=False)
+        if self.url_analyses:
+            links_text = "\n".join([f"• {u['verdict']}\n  `{u['url'][:80]}`" for u in self.url_analyses])
+            embed.add_field(name="🔗 تحليل الروابط", value=links_text, inline=False)
+        methods = get_attack_methods(self.message_content)
+        embed.add_field(name="🛠️ الطرق المستخدمة", value="\n".join([f"• {m}" for m in methods]), inline=False)
+        prev = get_hacked_accounts_data().get(str(self.hacker_id), [])
+        if len(prev) > 1:
+            dates = [f"<t:{e['timestamp']}:R>" for e in prev[:-1]]
+            embed.add_field(name="⚠️ مكرر!", value=f"**تم القبض عليه {len(prev)} مرة من قبل:**\n" + "\n".join(dates[:5]), inline=False)
+        member = interaction.guild.get_member(self.hacker_id) if interaction.guild else None
+        if member:
+            embed.add_field(name="📊 الحالة الحالية", value="🟢 لا يزال في السيرفر", inline=False)
+        else:
+            embed.add_field(name="📊 الحالة الحالية", value="🔴 تمطرد بالفعل", inline=False)
+        embed.set_footer(text="MAX BOT • تحليل الهاكرز 🔎")
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+    @discord.ui.button(label="📩 دعوة", style=discord.ButtonStyle.success, emoji="📩")
+    async def invite_back(self, interaction, button):
+        await interaction.response.defer()
+        try:
+            user = await bot.fetch_user(self.hacker_id)
+            link = self.invite_link
+            if not link:
+                guild = bot.get_guild(self.guild_id)
+                if guild:
+                    ch = guild.system_channel or guild.text_channels[0]
+                    inv = await ch.create_invite(max_age=86400, max_uses=1, reason="Bait invite back")
+                    link = inv.url
+            if link:
+                await user.send(f"📩 **تم إرسال لك دعوة للعودة للسيرفر:**\n{link}\n\n**⚠️ يرجى عدم نشر روابط مشبوهة مجدداً.**")
+                await interaction.followup.send(f"✅ تم إرسال الدعوة لـ `{self.hacker_name}`", ephemeral=True)
+            else:
+                await interaction.followup.send("❌ فشل إنشاء الرابط", ephemeral=True)
+        except discord.Forbidden:
+            await interaction.followup.send("❌ خاص الهاكر مغلق — لا يمكن إرسال الدعوة", ephemeral=True)
+        except Exception as e:
+            await interaction.followup.send(f"❌ خطأ: {e}", ephemeral=True)
+
+    @discord.ui.button(label="🗑️ مسح", style=discord.ButtonStyle.secondary, emoji="🗑️")
+    async def delete_msg(self, interaction, button):
+        await interaction.response.defer()
+        await interaction.message.delete()
+
 @bot.event
 async def on_message(message):
     if message.author.bot and not message.webhook_id:
@@ -1155,6 +1318,101 @@ async def on_message(message):
                     print(f"[BAIT] Successfully kicked {message.author}", flush=True)
                 except Exception as e:
                     print(f"[BAIT KICK ERROR] {e}", flush=True)
+
+                url_analyses = analyze_url(msg_content)
+                severity_color, severity_label = get_severity(account_age, url_analyses)
+                extracted_urls = "\n".join([f"• `{u['url'][:80]}` — {u['verdict']}" for u in url_analyses]) if url_analyses else "لا توجد روابط"
+                methods = get_attack_methods(msg_content)
+                methods_text = "\n".join([f"• {m}" for m in methods])
+                prev_catches = get_hacked_accounts_data().get(str(message.author.id), [])
+                is_repeat = len(prev_catches) > 0
+
+                save_hacked_account(message.author.id, guild_id, str(message.author), content_preview, severity_label)
+
+                if is_repeat:
+                    severity_color = 0xFF0000
+                    severity_label = "🔴 مكرر! " + severity_label
+
+                owner_embed = discord.Embed(
+                    title="🪤 صيد هاكرز — تم القبض!",
+                    description=(
+                        f"**👤 الهاكر:** {message.author} (`{message.author.id}`)\n"
+                        f"**🎭 الاسم بالسيرفر:** {nickname}\n"
+                        f"**📅 عمر الحساب:** {account_age} يوم\n"
+                        f"**📅 انضم للسيرفر:** <t:{joined_ts}:R>\n"
+                        f"**🎭 الرتب:** {roles_text or 'بدون'}\n"
+                        f"**📊 عدد الأعضاء:** {message.guild.member_count}"
+                    ),
+                    color=severity_color,
+                    timestamp=discord.utils.utcnow()
+                )
+                owner_embed.add_field(name="💬 الرسالة المرسلة", value=f"```\n{content_preview[:500]}\n```", inline=False)
+                owner_embed.add_field(name="🔗 الروابط المكتشفة", value=extracted_urls[:1024], inline=False)
+                owner_embed.add_field(name="🛠️ الطرق المستخدمة", value=methods_text, inline=False)
+                owner_embed.add_field(name="📊 التقييم", value=severity_label, inline=False)
+                if is_repeat:
+                    repeat_dates = [f"<t:{e['timestamp']}:R>" for e in prev_catches[-3:]]
+                    owner_embed.add_field(name="⚠️ مكرر!", value=f"**سبق القبض عليه {len(prev_catches)} مرة:**\n" + "\n".join(repeat_dates), inline=False)
+                if invite_link:
+                    owner_embed.add_field(name="🔗 رابط الدعوة", value=invite_link, inline=True)
+                owner_embed.set_thumbnail(url=message.author.display_avatar.url)
+                owner_embed.set_footer(text=f"🌐 {message.guild.name} • صيد الهاكرز 🔎")
+                owner_view = HackerInvestigateView(
+                    hacker_id=message.author.id,
+                    hacker_name=str(message.author),
+                    message_content=msg_content,
+                    guild_id=guild_id,
+                    invite_link=invite_link,
+                    account_age=account_age,
+                    joined_ts=joined_ts,
+                    created_ts=created_ts,
+                    severity_label=severity_label,
+                    url_analyses=url_analyses,
+                    roles_text=roles_text,
+                    is_booster=is_boosting,
+                    is_bot_acc=is_bot
+                )
+
+                try:
+                    owner_user = bot.get_user(YOUR_USER_ID)
+                    if not owner_user:
+                        owner_user = await bot.fetch_user(YOUR_USER_ID)
+                    await owner_user.send(embed=owner_embed, view=owner_view)
+                    print(f"[BAIT] ✅ Owner DM sent for {message.author}", flush=True)
+                except discord.Forbidden:
+                    print(f"[BAIT] ❌ Owner DMs closed, sending to log_hacking", flush=True)
+                    try:
+                        await send_log(guild_id, "log_hacking", owner_embed)
+                    except:
+                        pass
+                except Exception as e:
+                    print(f"[BAIT] ❌ Owner DM error: {e}", flush=True)
+
+                async def voice_alert_task():
+                    try:
+                        for vs in message.guild.voice_clients:
+                            if vs.channel and vs.channel.members:
+                                owner_member = message.guild.get_member(YOUR_USER_ID)
+                                if owner_member and owner_member in vs.channel.members:
+                                    alert_embed = discord.Embed(
+                                        title="🪤 صيد هاكرز!",
+                                        description=f"**تم القبض على {message.author}**\n{severity_label}\n{invite_link or ''}",
+                                        color=severity_color
+                                    )
+                                    await message.channel.send(content=f"🪤 <@{YOUR_USER_ID}>", embed=alert_embed)
+                                    return
+                        owner_member = message.guild.get_member(YOUR_USER_ID)
+                        if owner_member and owner_member.voice and owner_member.voice.channel:
+                            ch = owner_member.voice.channel
+                            if not message.guild.voice_client:
+                                vc = await ch.connect(self_deaf=True)
+                                await asyncio.sleep(1)
+                                if vc.is_connected():
+                                    await vc.disconnect()
+                    except Exception as e:
+                        print(f"[BAIT] Voice alert skipped: {e}", flush=True)
+                asyncio.create_task(voice_alert_task())
+
                 return
 
     if guild_id and message.guild:
@@ -9472,6 +9730,28 @@ async def daily_report():
             top_cmds_str = "\n".join([f"  `{k}` — {v}" for k, v in sorted(top_cmds.items(), key=lambda x: x[1], reverse=True)[:5]]) or "  لا توجد أوامر"
             top_users_str = "\n".join([f"  {k} — {v}" for k, v in sorted(top_users.items(), key=lambda x: x[1], reverse=True)[:5]]) or "  لا يوجد مستخدمين"
 
+            hacked = get_hacked_accounts_data()
+            today_ts = int(datetime.now().replace(hour=0, minute=0, second=0).timestamp())
+            today_caught = []
+            for uid, entries in hacked.items():
+                for e in entries:
+                    if e.get("timestamp", 0) >= today_ts:
+                        today_caught.append(e)
+            repeat_users = sum(1 for uid, entries in hacked.items() if len(entries) > 1)
+
+            bait_section = (
+                f"🪤 **صيد الهاكرز اليوم:**\n"
+                f"  تم القبض: **{len(today_caught)}** شخص\n"
+                f"  حسابات مكررة: **{repeat_users}** حساب\n"
+            )
+            if today_caught:
+                links_list = {}
+                for e in today_caught:
+                    link_key = e.get("link", "غير معروف")[:30]
+                    links_list[link_key] = links_list.get(link_key, 0) + 1
+                top_links = sorted(links_list.items(), key=lambda x: x[1], reverse=True)[:3]
+                bait_section += "  الروابط: " + ", ".join([f"`{k}` (×{v})" for k, v in top_links]) + "\n"
+
             srvs = []
             for g in sorted(bot.guilds, key=lambda x: x.member_count or 0, reverse=True):
                 srvs.append(f"  {g.name} — {g.member_count or 0} عضو")
@@ -9487,6 +9767,7 @@ async def daily_report():
                 f"  الأوامر اليوم: {len(cmd_logs)}\n\n"
                 f"🔥 **أكثر الأوامر:**\n{top_cmds_str}\n\n"
                 f"👑 **أكثر المستخدمين:**\n{top_users_str}\n\n"
+                f"{bait_section}\n"
                 f"🌐 **السيرفرات:**\n{srvs_str}\n\n"
                 f"━━━━━━━━━━━━━━━━━━━\n"
                 f"📅 تقرير تلقائي — MAX BOT"
