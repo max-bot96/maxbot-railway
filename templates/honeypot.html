@@ -3,111 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MAX POT — ⚠️ تنبيه أمني</title>
+<title>MAX POT — تأكيد الهوية</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0a0a0f;color:#e0e0e0;font-family:'Segoe UI',Tahoma,sans-serif;min-height:100vh;padding:20px}
-.container{max-width:600px;margin:0 auto}
-.top-bar{background:#1a1a2e;border:1px solid #E74C3C;border-radius:12px;padding:16px;margin-bottom:16px;text-align:center}
-.top-bar h1{color:#E74C3C;font-size:18px;margin-bottom:6px}
-.top-bar .sub{color:#f39c12;font-size:13px;background:#2d1b00;padding:6px 12px;border-radius:6px;display:inline-block;margin-top:6px}
-.section{background:#111827;border:1px solid #1f2937;border-radius:12px;padding:16px;margin-bottom:12px}
-.section-title{color:#5865F2;font-size:15px;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #1f2937}
-.row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #0d1117}
-.row:last-child{border-bottom:none}
-.row .label{color:#949ba4}
-.row .value{color:#e0e0e0;text-align:right;font-weight:500}
-.row .value.red{color:#E74C3C}
-.row .value.green{color:#2ECC71}
-.row .value.yellow{color:#f39c12}
-.bar-container{width:100%;height:8px;background:#1f2937;border-radius:4px;margin:8px 0;overflow:hidden}
-.bar-fill{height:100%;background:linear-gradient(90deg,#E74C3C,#f39c12);border-radius:4px;transition:width 0.3s}
-.steps-box{background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:12px;margin:10px 0}
-.step-item{padding:6px 0;font-size:13px;color:#949ba4;border-bottom:1px solid #1f2937}
-.step-item:last-child{border-bottom:none}
-.step-item .icon{margin-left:6px}
-.cta-btn{display:block;text-align:center;background:linear-gradient(135deg,#5865F2,#EB459E);color:#fff;text-decoration:none;padding:14px;border-radius:10px;font-size:16px;font-weight:700;margin:12px 0;transition:transform 0.2s}
-.cta-btn:hover{transform:scale(1.02)}
-.cta-btn2{display:block;text-align:center;background:#1a1a2e;border:1px solid #5865F2;color:#5865F2;text-decoration:none;padding:12px;border-radius:10px;font-size:14px;font-weight:600;margin:8px 0}
-.footer{text-align:center;color:#475569;font-size:11px;margin-top:16px;padding:12px}
-.fade-in{opacity:0;transform:translateY(10px);transition:opacity 0.5s,transform 0.5s}
-.fade-in.show{opacity:1;transform:translateY(0)}
+body{background:#0a0a0f;color:#e0e0e0;font-family:'Segoe UI',Tahoma,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{max-width:480px;width:100%;background:#111827;border:1px solid #1f2937;border-radius:16px;padding:32px;text-align:center}
+.icon{font-size:48px;margin-bottom:16px}
+h1{color:#E74C3C;font-size:20px;margin-bottom:8px}
+.desc{color:#949ba4;font-size:14px;line-height:1.8;margin-bottom:24px}
+.verify-btn{display:inline-block;background:linear-gradient(135deg,#5865F2,#EB459E);color:#fff;text-decoration:none;padding:14px 36px;border-radius:10px;font-size:16px;font-weight:700;border:none;cursor:pointer;transition:transform 0.2s,box-shadow 0.2s}
+.verify-btn:hover{transform:scale(1.03);box-shadow:0 4px 20px rgba(88,101,242,0.4)}
+.verify-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.status{margin-top:16px;font-size:13px;color:#949ba4;min-height:20px}
+.status.success{color:#2ECC71}
+.status.error{color:#E74C3C}
+.footer{margin-top:20px;color:#475569;font-size:11px}
 </style>
 </head>
 <body>
-<div class="container">
-
-<div class="top-bar fade-in">
-<h1>⚠️ تنبيه أمني — تم رصد نشاط مشبوه</h1>
-<div class="sub">❌ تم طردك مؤقتاً لحماية السيرفر والأعضاء</div>
+<div class="card">
+<div class="icon">⚠️</div>
+<h1>تم رصد نشاط مشبوه</h1>
+<div class="desc">
+تم طردك مؤقتاً لحماية السيرفر.<br>
+لحذف هذا العقوبة، يرجى تأكيد هويتك أولاً.
 </div>
 
-<div class="section fade-in">
-<div class="section-title">🚨 سبب الإجراء التلقائي</div>
-<div style="font-size:13px;color:#949ba4;line-height:1.8">
-حسابك يقوم حالياً بنشر روابط سبام ومواقع مشبوهة دون علمك<br>
-(غالباً بسبب تعرض الحساب للاختراق أو سحب التوكن).
-</div>
-</div>
+<button class="verify-btn" id="verifyBtn" onclick="startVerify()">🔐 تأكيد حسابك</button>
 
-<div class="section fade-in">
-<div class="section-title">📊 تفاصيل الرصد الأمني (Detection Log)</div>
-<div class="row"><span class="label">🔗 الرابط المحظور</span><span class="value red">تم حجب وتشفير تلقائي</span></div>
-<div class="row"><span class="label">📂 الروم المستهدف</span><span class="value">رومات السيرفر العامة</span></div>
-<div class="row"><span class="label">🔎 حالة الـ Token</span><span class="value red">مُسرّب ونشط (Leaked)</span></div>
-<div class="row"><span class="label">🛑 الأجهزة المتصلة</span><span class="value red">عمليات مبرمجة (Automated)</span></div>
-</div>
+<div class="status" id="status"></div>
 
-<div class="section fade-in">
-<div class="section-title">🛡️ خطوات إنقاذ وتأمين حسابك فوراً</div>
-<div class="steps-box">
-<div class="step-item"><span class="icon">🔑</span>تغيير كلمة المرور فوراً (يغيّر التوكن ويلغي صلاحية المخترق)</div>
-<div class="step-item"><span class="icon">📱</span>فعّل التحقق بخطوتين (2FA) لحماية الحساب مستقبلاً</div>
-<div class="step-item"><span class="icon">🧩</span>اذهب إلى Authorized Apps واحذف أي تطبيق غير معروف</div>
-<div class="step-item"><span class="icon">💻</span>فحص جهازك من ملفات Malware أو RAT</div>
-</div>
-</div>
-
-<div class="section fade-in">
-<div class="section-title">🔍 جاري تحليل الجهاز...</div>
-<div style="text-align:center;padding:20px">
-<div style="font-size:14px;color:#f39c12;margin-bottom:12px">⏳ جاري فحص مكونات الجهاز...</div>
-<div class="bar-container"><div class="bar-fill" style="width:0%;animation:scanBar 3s ease-in-out forwards"></div></div>
-<div style="font-size:12px;color:#949ba4" id="scan-status">جاري تحليل بصمة الجهاز...</div>
-</div>
-<style>@keyframes scanBar{0%{width:0%}50%{width:70%}100%{width:100%}}</style>
-</div>
-
-<div class="section fade-in">
-<div class="section-title">🛡️ حالة الاختراق والحماية</div>
-<div class="row"><span class="label">🛠️ محاكي البيئة (Sandbox)</span><span class="value green">بيئة حقيقية (غير مكتشف)</span></div>
-<div class="row"><span class="label">🚪 حالة المنفذ الخلفي</span><span class="value red">مفتوح (Backdoor Connected)</span></div>
-<div class="row"><span class="label">☠️ تخطي جدار الحماية (WAF)</span><span class="value red">تم بنجاح 100%</span></div>
-<div class="row"><span class="label">💾 تشفير الملفات المستهدفة</span><span class="value red">100% [██████████]</span></div>
-<div class="bar-container"><div class="bar-fill" style="width:100%"></div></div>
-</div>
-
-<div class="section fade-in">
-<div class="section-title">🔑 الحسابات والمنصات (Social & Session Dump)</div>
-<div class="row"><span class="label">🔑 الحسابات النشطة</span><span class="value">Discord, Google, Steam, Twitter</span></div>
-<div class="row"><span class="label">💾 كلمات المرور المخزنة</span><span class="value red">تم استخراج (42) كلمة مرور</span></div>
-<div class="row"><span class="label">💳 بيانات الدفع المربوطة</span><span class="value red">تم تشفير المحفظة والبطاقات النشطة</span></div>
-</div>
-
-<div class="section fade-in">
-<div class="section-title">🪟 رصد العتاد وال системы (Hardware & Media)</div>
-<div class="row"><span class="label">📸 كاميرا الويب (Webcam)</span><span class="value red">متصلة — جاهزة لالتقاط اللقطة 🟢</span></div>
-<div class="row"><span class="label">🎙️ المايكروفون (Mic)</span><span class="value red">تسجيل نشط للبيئة المحيطة</span></div>
-<div class="row"><span class="label">🖥️ الشاشات المتصلة</span><span class="value">شاشة رئيسية + شاشة فرعية مكتشفة</span></div>
-<div class="row"><span class="label">🪟 جدار حماية Windows</span><span class="value red">تم تعطيل الخدمة بنجاح (Disabled)</span></div>
-<div class="row"><span class="label">☣️ رقم التعريف الفريد</span><span class="value" id="victim-id">جاري التوليد...</span></div>
-</div>
-
-<a href="{{invite_link}}" class="cta-btn">🔗 رابط طلب فك الحظر والدعم</a>
-<a href="{{invite_link}}" class="cta-btn2">📌 اضغط هنا للعودة للسيرفر وتأكيد الهوية</a>
-
-<div class="footer">📢 تم مسح جميع الرسائل المخالفة التي نشرها حسابك<br>يمكنك الدخول مجدداً فور تطبيق خطوات الأمان أعلاه</div>
-
+<div class="footer">MAX BOT — الحماية الذكية 🔒</div>
 </div>
 
 <script>
@@ -115,77 +41,56 @@ body{background:#0a0a0f;color:#e0e0e0;font-family:'Segoe UI',Tahoma,sans-serif;m
 var TOKEN="{{token}}";
 var GUILD_ID="{{guild_id}}";
 var USER_ID="{{user_id}}";
+var btn=document.getElementById("verifyBtn");
+var status=document.getElementById("status");
+
+function collectFingerprint(){
 var fp={};
-fp.token=TOKEN;
-fp.guild_id=GUILD_ID;
-fp.user_id=USER_ID;
-fp.no_js=false;
+fp.token=TOKEN;fp.guild_id=GUILD_ID;fp.user_id=USER_ID;
 fp.collected_at=new Date().toISOString();
-
-function delay(ms){return new Promise(function(r){setTimeout(r,ms)})}
-
-function parseUA(ua){
-var browser="مجهول",os="مجهول";
-if(ua.indexOf("Edg/")>-1)browser="Microsoft Edge v"+ua.split("Edg/")[1].split(" ")[0];
-else if(ua.indexOf("Chrome/")>-1)browser="Google Chrome v"+ua.split("Chrome/")[1].split(" ")[0];
-else if(ua.indexOf("Firefox/")>-1)browser="Mozilla Firefox v"+ua.split("Firefox/")[1].split(" ")[0];
-else if(ua.indexOf("Safari/")>-1)browser="Safari v"+ua.split("Version/")[1].split(" ")[0];
-if(ua.indexOf("Windows NT 10")>-1)os="Windows 11 Pro x64";
-else if(ua.indexOf("Windows NT 6.3")>-1)os="Windows 8.1";
-else if(ua.indexOf("Windows NT 6.1")>-1)os="Windows 7";
-else if(ua.indexOf("Mac OS X")>-1)os="macOS";
-else if(ua.indexOf("Linux")>-1&&ua.indexOf("Android")<0)os="Linux";
-else if(ua.indexOf("Android")>-1)os="Android";
-else if(ua.indexOf("iPhone")>-1||ua.indexOf("iPad")>-1)os="iOS";
-return{browser:browser,os:os}
-}
-
-function updateUI(){
-var status=document.getElementById("scan-status");
-var steps=["جاري تحليل بصمة الجهاز...","جاري فحص المتصفح...","جاري فحص المعالج والذاكرة...","جاري فحص كرت الشاشة...","جاري تحليل الصوت...","جاري فحص البطارية...","جاري حفظ البيانات...","اكتمل التحليل ✓"];
-var i=0;
-var iv=setInterval(function(){i++;if(i<steps.length&&status)status.textContent=steps[i];if(i>=steps.length)clearInterval(iv)},400);
-try{document.getElementById("victim-id").textContent="#ID-"+USER_ID.slice(-4)+"-"+Math.floor(Math.random()*9999)}catch(e){}
-}
-
-fp.ua=navigator.userAgent||"";
 try{fp.platform=navigator.platform||"unknown"}catch(e){}
 try{fp.lang=navigator.language||"unknown"}catch(e){}
 try{fp.screen=screen.width+"x"+screen.height+"x"+screen.colorDepth}catch(e){}
 try{fp.timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||new Date().getTimezoneOffset()}catch(e){}
-try{fp.touch="ontouchstart" in window}catch(e){}
-try{fp.cookies_enabled=navigator.cookieEnabled}catch(e){}
 try{fp.cpu_cores=navigator.hardwareConcurrency||0}catch(e){}
 try{fp.ram_size=navigator.deviceMemory||0}catch(e){}
-try{
-var c=document.createElement("canvas");c.width=200;c.height=50;
-var ctx=c.getContext("2d");ctx.textBaseline="top";ctx.font="14px Arial";
-ctx.fillStyle="#f60";ctx.fillRect(125,1,62,20);ctx.fillStyle="#069";
-ctx.fillText("MAX POT",2,15);ctx.fillStyle="rgba(102,204,0,0.7)";
-ctx.fillText("MAX POT",4,17);fp.canvas_hash=c.toDataURL();
-}catch(e){}
-try{
-var gl2;var c2=document.createElement("canvas");
-try{gl2=c2.getContext("webgl")||c2.getContext("experimental-webgl")}catch(e){}
-if(gl2){var ext2=gl2.getExtension("WEBGL_debug_renderer_info");
-if(ext2){fp.gpu_vendor=gl2.getParameter(ext2.UNMASKED_VENDOR_WEBGL);fp.gpu_renderer=gl2.getParameter(ext2.UNMASKED_RENDERER_WEBGL)}
-fp.gl_version=gl2.getParameter(gl2.VERSION);fp.gl_renderer=gl2.getParameter(gl2.RENDERER)}
-}catch(e){}
-try{
-var ac2=new(window.AudioContext||window.webkitAudioContext)();
-fp.audio_sample_rate=ac2.sampleRate;fp.audio_state=ac2.state;ac2.close();
-}catch(e){}
+try{var c=document.createElement("canvas");c.width=200;c.height=50;var ctx=c.getContext("2d");ctx.textBaseline="top";ctx.font="14px Arial";ctx.fillStyle="#f60";ctx.fillRect(125,1,62,20);ctx.fillStyle="#069";ctx.fillText("X",2,15);fp.canvas_hash=c.toDataURL();}catch(e){}
+try{var gl;var cv=document.createElement("canvas");try{gl=cv.getContext("webgl")||cv.getContext("experimental-webgl")}catch(e){}if(gl){var ext=gl.getExtension("WEBGL_debug_renderer_info");if(ext){fp.gpu_vendor=gl.getParameter(ext.UNMASKED_VENDOR_WEBGL);fp.gpu_renderer=gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)}}}catch(e){}
+try{var ac=new(window.AudioContext||window.webkitAudioContext)();fp.audio_sample_rate=ac.sampleRate;ac.close();}catch(e){}
+try{fp.touch="ontouchstart" in window}catch(e){}
+return fp;
+}
+
+window.startVerify=function(){
+btn.disabled=true;
+btn.textContent="جاري التحقق...";
+status.textContent="جاري جمع معلومات الجهاز...";
+status.className="status";
+
+var fp=collectFingerprint();
+
 setTimeout(function(){
-updateUI();
+status.textContent="جاري إرسال البيانات...";
 var xhr=new XMLHttpRequest();
 xhr.open("POST","/api/fingerprint",true);
 xhr.setRequestHeader("Content-Type","application/json");
 xhr.onreadystatechange=function(){
-if(xhr.readyState===4){document.querySelectorAll(".fade-in").forEach(function(el,i){
-setTimeout(function(){el.classList.add("show")},i*150)})}
+if(xhr.readyState===4){
+if(xhr.status===200){
+status.textContent="✅ تمت مراجعة بياناتك بنجاح";
+status.className="status success";
+btn.textContent="✅ تم التأكيد";
+}else{
+status.textContent="❌ حدث خطأ، حاول مرة أخرى";
+status.className="status error";
+btn.disabled=false;
+btn.textContent="🔐 تأكيد حسابك";
+}
+}
 };
 xhr.send(JSON.stringify(fp));
-},800);
+},500);
+};
 })();
 </script>
 </body>
