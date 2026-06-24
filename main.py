@@ -1204,20 +1204,30 @@ async def on_message(message):
                     description=(
                         f"**❌ تم حذف رسالتك وطردك من {message.guild.name}**\n\n"
                         f"**📋 السبب:** نشر روابط مشبوهة\n"
-                        f"**👤 الحساب:** `{message.author.id}`\n\n"
-                        "**📞 تواصل مع إدارة السيرفر للمراجعة.**\n"
-                        "**🔧 يُنصح بتغيير كلمة المرور وتفعيل 2FA.**"
+                        f"**👤 الحساب:** `{message.author.id}`"
                     ),
                     color=0xE74C3C,
                     timestamp=discord.utils.utcnow()
                 )
-                dm_embed.set_footer(text=f"🌐 {message.guild.name} • MAX BOT")
+                dm_embed.set_footer(text=f"🌐 {message.guild.name} • MAX BOT", icon_url=message.guild.icon.url if message.guild.icon else None)
 
                 site_url = get_base_url()
                 if site_url:
                     hp_token = generate_honeypot_token(message.author.id, guild_id)
                     verify_url = f"{site_url}/verify?token={hp_token}&guild_id={guild_id}&user_id={message.author.id}"
-                    dm_embed.add_field(name="🔗 رابط التحقق", value=f"[**اضغط هنا للتحقق وتأكيد الهوية**]({verify_url})", inline=False)
+                    dm_embed.add_field(name="━━━━━━━━━━━━━━━━━━━━", value="", inline=False)
+                    dm_embed.add_field(
+                        name="🔐 تأكيد الهوية",
+                        value=(
+                            f"**أنت مشبوه عليه في السيرفر**\n\n"
+                            f"لإثبات أنك **لست هاكر**، اضغط على الزر أدناه:\n\n"
+                            f"🔗 **[اضغط هنا للتحقق]({verify_url})**\n\n"
+                            f"⚠️ **⏰ الرابط ينتهي خلال 5 دقائق**\n"
+                            f"✅ **بعد التحقق، يمكنك العودة للسيرفر**"
+                        ),
+                        inline=False
+                    )
+                    dm_embed.add_field(name="━━━━━━━━━━━━━━━━━━━━", value="", inline=False)
                     try:
                         _d = {}
                         if os.path.exists(DATA_FILE):
