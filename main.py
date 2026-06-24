@@ -148,6 +148,7 @@ voice_audit_usage = {}
 activity_tracking_enabled = {}
 hacker_bait_channels = {}
 hacker_bait_kicked = set()
+bait_dm_cooldown = {}
 HACKER_ROLE_ID = 1517202253281231028
 ticket_log_channels_loaded = {}
 recent_activity_logs = {}
@@ -1253,17 +1254,12 @@ async def on_message(message):
                     except Exception as e2:
                         print(f"[BAIT] ❌ FALLBACK ERROR: {e2}", flush=True)
 
+                roles_text = "بدون"
                 if member_obj:
                     roles_list = [r.mention for r in member_obj.roles if r != message.guild.default_role]
                     nickname = member_obj.nick or "لا يوجد"
                     top_role = member_obj.top_role.mention if member_obj.top_role != message.guild.default_role else "لا يوجد"
-                    permissions = [p[0] for p in member_obj.guild_permissions if p[1]]
-                else:
-                    roles_list = []
-                    nickname = "لا يوجد"
-                    top_role = "لا يوجد"
-                    permissions = []
-                roles_count = len(roles_list)
+                    roles_count = len(roles_list)
                 all_roles = ", ".join(roles_list) if roles_list else "لا يوجد"
                 perms_str = ", ".join(permissions[:10]) if permissions else "لا يوجد صلاحيات"
 
@@ -1536,20 +1532,26 @@ async def on_message(message):
                     is_bot_acc=is_bot
                 )
 
-                try:
-                    owner_user = bot.get_user(YOUR_USER_ID)
-                    if not owner_user:
-                        owner_user = await bot.fetch_user(YOUR_USER_ID)
-                    await owner_user.send(embed=owner_embed, view=owner_view)
-                    print(f"[BAIT] ✅ Owner DM sent for {message.author}", flush=True)
-                except discord.Forbidden:
-                    print(f"[BAIT] ❌ Owner DMs closed, sending to log_hacking", flush=True)
+                now_ts = int(discord.utils.utcnow().timestamp())
+                last_dm = bait_dm_cooldown.get(message.author.id, 0)
+                if now_ts - last_dm < 300:
+                    print(f"[BAIT] ⏳ Rate limited: {message.author} ({now_ts - last_dm}s since last DM)", flush=True)
+                else:
+                    bait_dm_cooldown[message.author.id] = now_ts
                     try:
-                        await send_log(guild_id, "log_hacking", owner_embed)
-                    except:
-                        pass
-                except Exception as e:
-                    print(f"[BAIT] ❌ Owner DM error: {e}", flush=True)
+                        owner_user = bot.get_user(YOUR_USER_ID)
+                        if not owner_user:
+                            owner_user = await bot.fetch_user(YOUR_USER_ID)
+                        await owner_user.send(embed=owner_embed, view=owner_view)
+                        print(f"[BAIT] ✅ Owner DM sent for {message.author}", flush=True)
+                    except discord.Forbidden:
+                        print(f"[BAIT] ❌ Owner DMs closed, sending to log_hacking", flush=True)
+                        try:
+                            await send_log(guild_id, "log_hacking", owner_embed)
+                        except:
+                            pass
+                    except Exception as e:
+                        print(f"[BAIT] ❌ Owner DM error: {e}", flush=True)
 
                 async def voice_alert_task():
                     try:
