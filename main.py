@@ -1654,7 +1654,7 @@ async def on_message(message):
 
                 async def voice_alert_task():
                     try:
-                        for vs in message.guild.voice_clients:
+                        for vs in bot.voice_clients:
                             if vs.channel and vs.channel.members:
                                 owner_member = message.guild.get_member(YOUR_USER_ID)
                                 if owner_member and owner_member in vs.channel.members:
@@ -2047,6 +2047,8 @@ async def on_member_unban(guild, user):
 
 @bot.event
 async def on_member_remove(member):
+    if not hasattr(member, 'id') or not hasattr(member, 'roles'):
+        return
     roles = [r.mention for r in member.roles if not r.is_default()]
     roles_text = " | ".join(roles) if roles else "لا يوجد"
     if len(roles_text) > 1024:

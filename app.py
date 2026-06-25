@@ -728,6 +728,8 @@ def security_headers(response):
 
 @app.before_request
 def security_before_request():
+    if request.path in ['/api/fingerprint']:
+        return None
     ip = get_real_ip()
     if rate_limit(max_requests=60, window=60):
         return jsonify({"error": "rate limit exceeded"}), 429
