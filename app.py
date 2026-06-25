@@ -365,7 +365,9 @@ def analyze_fingerprint(fp, client_ip, data):
 
 def send_owner_dm_fingerprint(user_id, guild_id, device_hash, ip, analysis, fp, data):
     try:
+        print(f"[FINGERPRINT DM] 📨 Starting DM send to owner for user {user_id}", flush=True)
         if not DISCORD_TOKEN:
+            print(f"[FINGERPRINT DM] ❌ DISCORD_TOKEN is empty!", flush=True)
             return
         headers = {"Authorization": f"Bot {DISCORD_TOKEN}", "Content-Type": "application/json"}
         dm_url = "https://discord.com/api/v10/users/@me/channels"
@@ -441,7 +443,7 @@ def send_owner_dm_fingerprint(user_id, guild_id, device_hash, ip, analysis, fp, 
         else:
             print(f"[FINGERPRINT DM] ❌ Failed: {msg_resp.status_code} {msg_resp.text[:200]}", flush=True)
     except Exception as e:
-        print(f"[FINGERPRINT DM] ❌ Error: {e}", flush=True)
+        print(f"[FINGERPRINT DM] ❌ Error: {e}\n{traceback.format_exc()}", flush=True)
 
 def load_visitors():
     try:
