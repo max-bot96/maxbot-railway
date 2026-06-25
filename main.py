@@ -1153,6 +1153,295 @@ class HackerInvestigateView(discord.ui.View):
         except Exception as e:
             await interaction.followup.send(f"❌ خطأ: {e}", ephemeral=True)
 
+    @discord.ui.button(label="👤 معلومات الشخص", style=discord.ButtonStyle.primary, emoji="👤", custom_id="bait_fullinfo")
+    async def full_info(self, interaction, button):
+        await interaction.response.defer()
+        try:
+            user = await bot.fetch_user(self.hacker_id)
+            guild = bot.get_guild(self.guild_id)
+            member = guild.get_member(self.hacker_id) if guild else None
+
+            embed = discord.Embed(
+                title=f"👤 معلومات كاملة — {user}",
+                color=0x3498DB,
+                timestamp=discord.utils.utcnow()
+            )
+            embed.set_thumbnail(url=user.display_avatar.url)
+
+            created_ts = int(user.created_at.timestamp())
+            embed.add_field(
+                name="📋 معلومات الحساب",
+                value=(
+                    f"├─ المعرف: `{user.id}`\n"
+                    f"├─ الاسم: `{user}`\n"
+                    f"├─ الاسم الأصلي: `{user.name}`\n"
+                    f"├─ تاريخ الإنشاء: <t:{created_ts}:F> (<t:{created_ts}:R>)\n"
+                    f"├─ عمر الحساب: **{self.account_age}** يوم\n"
+                    f"├─ بوت؟ {'نعم 🤖' if user.bot else 'لا'}\n"
+                    f"└─ بوست؟ {'نعم 💎' if user.premium_since else 'لا'}"
+                ),
+                inline=False
+            )
+
+            if member:
+                nickname = member.nick or "لا يوجد"
+                top_role = member.top_role.name if member.top_role != guild.default_role else "لا يوجد"
+                roles_list = [r.name for r in member.roles if r != guild.default_role]
+                roles_count = len(roles_list)
+                roles_text = " • ".join(roles_list[:20])
+                if roles_count > 20:
+                    roles_text += f" +{roles_count - 20} أخرى"
+
+                status_map = {
+                    discord.Status.online: "🟢 متصل",
+                    discord.Status.idle: "🌙 خامل",
+                    discord.Status.dnd: "🔴 لا تزعج",
+                    discord.Status.offline: "⚫ غير متصل",
+                }
+                status = status_map.get(member.status, "⚫ غير معروف")
+
+                devices = []
+                if member.mobile:
+                    devices.append("📱 جوال")
+                if member.desktop:
+                    devices.append("🖥️ كمبيوتر")
+                if member.web_client:
+                    devices.append("🌐 متصفح")
+                devices_str = " • ".join(devices) if devices else "غير معروف"
+
+                custom_status = "لا يوجد"
+                for act in member.activities:
+                    if act.type == discord.ActivityType.custom and act.state:
+                        custom_status = act.state
+                        break
+
+                permissions = [p[0] for p in member.guild_permissions if p[1]]
+                perms_str = " • ".join(permissions[:15])
+                if len(permissions) > 15:
+                    perms_str += f" +{len(permissions) - 15} أخرى"
+
+                badges = []
+                try:
+                    flags = user.public_flags
+                    if flags.verified_bot_developer:
+                        badges.append("🔧 مطور موثوق")
+                    if flags.discord_certified_moderator:
+                        badges.append("🛡️ مoderator موثوق")
+                    if flags.active_developer:
+                        badges.append("👨‍💻 مطور نشط")
+                    if flags.early_supporter:
+                        badges.append("⭐ داعم مبكر")
+                    if flags.staff:
+                        badges.append("👔 طاقم ديسكورد")
+                    if flags.partner:
+                        badges.append("🤝 شريك ديسكورد")
+                    if flags.hypesquad_events:
+                        badges.append("🎉 HypeSquad")
+                    if flags.bughunter_1:
+                        badges.append("🐛 صياد باغز")
+                    if flags.bughunter_2:
+                        badges.append("🐛 صياد باغز ذهبي")
+                    if flags.early_verified_bot_developer:
+                        badges.append("🔧 مطور بوت موثوق مبكر")
+                except:
+                    pass
+                if user.avatar and user.avatar.is_animated():
+                    badges.append("🎞️ أفاتار متحرك")
+                badges_str = " • ".join(badges) if badges else "لا يوجد"
+
+                if self.joined_ts:
+                    embed.add_field(
+                        name="🏰 معلومات السيرفر",
+                        value=(
+                            f"├─ الاسم بالسيرفر: **{nickname}**\n"
+                            f"├─ أعلى رتبة: **{top_role}**\n"
+                            f"├─ الرتب ({roles_count}): {roles_text}\n"
+                            f"├─ الحالة: {status}\n"
+                            f"├─ الأجهزة: {devices_str}\n"
+                            f"├─ الحالة الشخصية: {custom_status}\n"
+                            f"├─ انضم للسيرفر: <t:{self.joined_ts}:F> (<t:{self.joined_ts}:R>)\n"
+                            f"└─ بوستر؟ {'نعم 💎' if member.premium_since else 'لا'}"
+                        ),
+                        inline=False
+                    )
+
+                embed.add_field(name="🏅 الشارات", value=badges_str, inline=False)
+                embed.add_field(name="🔑 الصلاحيات", value=perms_str[:1024], inline=False)
+
+                if member.roles:
+                    roles_hierarchy = sorted(member.roles, key=lambda r: r.position, reverse=True)
+                    hierarchy_text = "\n".join([f"{'🔴' if r.hoist else '⚪'} {r.name} (pos {r.position})" for r in roles_hierarchy[:15]])
+                    embed.add_field(name="📊 ترتيب الرتب", value=hierarchy_text, inline=False)
+            else:
+                embed.add_field(name="⚠️ ملاحظة", value="العضو لم يعد في السيرفر (تم الطرد)", inline=False)
+                if self.roles_text:
+                    embed.add_field(name="🎭 الرتب السابقة", value=self.roles_text, inline=False)
+
+            if self.invite_link:
+                embed.add_field(name="🔗 رابط الدعوة", value=self.invite_link, inline=True)
+
+            embed.set_footer(text=f"🌐 MAX BOT — معلومات الهاكر")
+            await interaction.followup.send(embed=embed, ephemeral=True)
+        except Exception as e:
+            await interaction.followup.send(f"❌ خطأ في جلب المعلومات: {e}", ephemeral=True)
+
+    @discord.ui.button(label="🔬 تحقق من الاختبار", style=discord.ButtonStyle.danger, emoji="🔬", custom_id="bait_honeypot")
+    async def honeypot_check(self, interaction, button):
+        await interaction.response.defer()
+        try:
+            fp_key = f"{self.guild_id}_{self.hacker_id}"
+            data = {}
+            try:
+                if os.path.exists(DATA_FILE):
+                    with open(DATA_FILE, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+            except:
+                pass
+
+            fingerprints = data.get("fingerprints", {})
+            fp = fingerprints.get(fp_key, {})
+            hardware_bans = data.get("hardware_bans", [])
+            hacked_accounts = data.get("hacked_accounts", {})
+            prev = hacked_accounts.get(str(self.hacker_id), [])
+
+            embed = discord.Embed(
+                title="🔬 تقرير اختبار الهاكرز — Honeypot",
+                color=0xE74C3C if fp else 0x95A5A6,
+                timestamp=discord.utils.utcnow()
+            )
+
+            if not fp:
+                embed.add_field(
+                    name="⚠️ لا توجد بيانات fingerprint",
+                    value=(
+                        f"**السبب:** الهاكر لم يضغط على رابط التحقق في صفحة الـ honeypot\n\n"
+                        f"**📊 معلومات الصيد:**\n"
+                        f"├─ التقييم: {self.severity_label}\n"
+                        f"├─ عمر الحساب: {self.account_age} يوم\n"
+                        f"├─ الروابط المشبوهة: {len(self.url_analyses)}\n"
+                        f"├─ الطرق المستخدمة: {', '.join(self.url_analyses[:3]) if self.url_analyses else 'غير معروف'}\n"
+                        f"└─ بوت؟ {'نعم' if self.is_bot_acc else 'لا'}"
+                    ),
+                    inline=False
+                )
+            else:
+                is_banned = fp.get("device_hash", "") in hardware_bans
+                ban_status = "🔴 **محظور (Hardware Ban)**" if is_banned else "🟢 غير محظور"
+
+                embed.add_field(
+                    name="📊 الحالة العامة",
+                    value=(
+                        f"├─ Hardware Ban: {ban_status}\n"
+                        f"├─ Device Hash: `{fp.get('device_hash', 'غير معروف')[:24]}`\n"
+                        f"├─ IP: `{fp.get('ip', 'غير معروف')}`\n"
+                        f"├─ تم الجمع: {fp.get('collected_at', 'غير معروف')[:19]}\n"
+                        f"└─ مكرر؟ **{len(prev)}** مرة سابقاً"
+                    ),
+                    inline=False
+                )
+
+                hw_text = (
+                    f"├─ 📱 النظام: {fp.get('platform', '?')}\n"
+                    f"├─ 🖥️ الشاشة: {fp.get('screen', '?')}\n"
+                    f"├─ 🎮 GPU: {fp.get('gpu_renderer', 'غير معروف')[:60]}\n"
+                    f"├─ 💾 RAM: {fp.get('ram_size', '?')} GB\n"
+                    f"├─ 🔧 CPU: {fp.get('cpu_cores', '?')} cores\n"
+                    f"├─ 🎵 Audio: {fp.get('audio_sample_rate', '?')} Hz\n"
+                    f"├─ 🔋 البطارية: {fp.get('battery_level', '?')}%\n"
+                    f"├─ 📷 الكاميرات: {fp.get('media_cam', '?')}\n"
+                    f"├─ 🎤 الميكروفونات: {fp.get('media_mic', '?')}\n"
+                    f"├─ 🔤 الخطوط: {fp.get('fonts_count', '?')} خط\n"
+                    f"├─ 🌐 WebGL: {fp.get('webgl_version', '?')}\n"
+                    f"├─ 🕐 JS Timing: {fp.get('js_timing', '?')} ms\n"
+                    f"├─ 🌐 WebRTC IP: {fp.get('webrtc_ip', 'غير متاح')}\n"
+                    f"├─ 🗣️ Speech Voices: {fp.get('speech_voices', '?')}\n"
+                    f"└─ 🐢 JS Engine: {fp.get('js_engine', '?')}"
+                )
+                embed.add_field(name="🖥️ معلومات الجهاز المتقدمة", value=hw_text, inline=False)
+
+                checks_text = ""
+                if fp.get("no_js"):
+                    checks_text += "🔴 لا يوجد JavaScript (headless browser)\n"
+                else:
+                    checks_text += "✅ JavaScript متاح\n"
+
+                if fp.get("webdriver"):
+                    checks_text += "🔴 navigator.webdriver = true (Selenium/Puppeteer)\n"
+                else:
+                    checks_text += "✅ navigator.webdriver = false\n"
+
+                if fp.get("incognito"):
+                    checks_text += "🔴 وضع Incognito مكتشف\n"
+                else:
+                    checks_text += "✅ وضع Incognito غير مكتشف\n"
+
+                if fp.get("languages", 0) == 0:
+                    checks_text += "🔴 لا توجد لغات مسجلة\n"
+                elif fp.get("languages", 0) > 5:
+                    checks_text += "⚠️ لغات كثيرة جداً (قد يكون proxy)\n"
+                else:
+                    checks_text += f"✅ {fp.get('languages', 0)} لغة\n"
+
+                touch = fp.get("touch_support", False)
+                max_touch = fp.get("max_touch_points", 0)
+                has_screen = fp.get("screen_width", 0) > 0
+                if touch and max_touch == 0:
+                    checks_text += "🔴 Touch مدعوم لكن 0 نقاط (مميزات وهمية)\n"
+                elif not touch and has_screen:
+                    checks_text += "✅ بدون Touch (normal desktop)\n"
+
+                if fp.get("battery_level", -1) == 0 and fp.get("charging") is False:
+                    checks_text += "⚠️ البطارية فاضية وغير مشحونة (قد يكون headless)\n"
+
+                media_count = (fp.get("media_cam", 0) or 0) + (fp.get("media_mic", 0) or 0)
+                if media_count == 0:
+                    checks_text += "🔴 لا توجد أجهزة media (headless)\n"
+
+                if checks_text:
+                    embed.add_field(name="🔬 نتائج الفحص التقني", value=checks_text[:1024], inline=False)
+
+                if prev:
+                    dates = [f"• <t:{e['timestamp']}:R>" for e in prev[-5:]]
+                    embed.add_field(
+                        name=f"⚠️ سجل القبض ({len(prev)} مرات)",
+                        value="\n".join(dates),
+                        inline=False
+                    )
+
+                score = 0
+                if is_banned:
+                    score += 10
+                if fp.get("no_js"):
+                    score += 8
+                if fp.get("webdriver"):
+                    score += 8
+                if fp.get("incognito"):
+                    score += 3
+                if media_count == 0:
+                    score += 4
+                if touch and max_touch == 0:
+                    score += 2
+                if prev:
+                    score += min(len(prev) * 3, 9)
+
+                if score >= 19:
+                    verdict = "🔴 هاكر مؤكد — تم الحظر تلقائياً"
+                elif score >= 9:
+                    verdict = "🟠 مشبوه جداً"
+                elif score >= 5:
+                    verdict = "🟡 مشبوه"
+                else:
+                    verdict = "🟢 نظيف"
+
+                embed.add_field(name="📊 التقييم النهائي", value=f"**النقاط: {score}/30**\n{verdict}", inline=False)
+
+                embed.set_thumbnail(url=interaction.user.display_avatar.url)
+
+            embed.set_footer(text=f"🌐 MAX BOT — نظام الحماية السيبرانية")
+            await interaction.followup.send(embed=embed, ephemeral=True)
+        except Exception as e:
+            await interaction.followup.send(f"❌ خطأ في فحص الـ honeypot: {e}", ephemeral=True)
+
 @bot.event
 async def on_message(message):
     if message.author.bot and not message.webhook_id:
