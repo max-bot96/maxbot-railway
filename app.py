@@ -74,7 +74,296 @@ OAUTH_ENABLED = bool(CLIENT_SECRET)
 TUNNEL_URL_FILE = "server_url2.txt"
 VISITORS_FILE = "visitors.json"
 
-def send_owner_dm_fingerprint(user_id, guild_id, device_hash, ip, platform, gpu, ram, cpu):
+def analyze_fingerprint(fp, client_ip, data):
+    score = 0
+    checks = []
+
+    # === 1. HARDWARE BAN CHECK ===
+    device_hash = fp.get("device_hash", "")
+    hardware_bans = data.get("hardware_bans", [])
+    if device_hash in hardware_bans:
+        score += 10
+        checks.append("🔴 الجهاز محظور سابقاً (Hardware Ban)")
+    else:
+        checks.append("✅ الجهاز غير محظور")
+
+    # === 2. REPEAT OFFENDER ===
+    user_id = fp.get("user_id", "")
+    hacked = data.get("hacked_accounts", {})
+    prev = hacked.get(str(user_id), [])
+    if prev:
+        score += min(len(prev) * 3, 9)
+        checks.append(f"🔴 تم القبض عليه {len(prev)} مرة سابقاً")
+    else:
+        checks.append("✅ لم يتم القبض عليه من قبل")
+
+    # === 3. HEADLESS / BOT DETECTION ===
+    if fp.get("webdriver"):
+        score += 8
+        checks.append("🔴 navigator.webdriver = true (Puppeteer/Selenium)")
+    else:
+        checks.append("✅ navigator.webdriver = false")
+
+    if not fp.get("chrome"):
+        score += 5
+        checks.append("🔴 window.chrome = false (Headless Browser)")
+    else:
+        checks.append("✅ window.chrome موجود")
+
+    if fp.get("plugins_count", 0) == 0:
+        score += 4
+        checks.append("🔴 بدون plugins (Headless Browser)")
+    else:
+        checks.append(f"✅ {fp.get('plugins_count', 0)} plugins")
+
+    if fp.get("cookies_enabled") == False:
+        score += 3
+        checks.append("🔴 الكوكيز معطّل")
+    else:
+        checks.append("✅ الكوكيز مفعّل")
+
+    # === 4. CANVAS FINGERPRINT ===
+    if not fp.get("canvas_hash"):
+        score += 5
+        checks.append("🔴 Canvas فاضي (لا يدعم الرسم)")
+    elif not fp.get("canvas_hash2"):
+        score += 2
+        checks.append("⚠️ Canvas layer 2 فاضي")
+    else:
+        checks.append("✅ Canvas fingerprint موجود")
+
+    # === 5. WEBGL / GPU ===
+    if not fp.get("gpu_renderer"):
+        score += 5
+        checks.append("🔴 GPU فاضي (Headless / VPS)")
+    else:
+        gpu = fp.get("gpu_renderer", "")
+        if "SwiftShader" in gpu or "llvmpipe" in gpu or "Software" in gpu:
+            score += 4
+            checks.append(f"🔴 GPU افتراضي: {gpu[:50]} (VM/Headless)")
+        else:
+            checks.append(f"✅ GPU: {gpu[:50]}")
+
+    if not fp.get("webgl_extensions"):
+        score += 2
+        checks.append("🔴 WebGL extensions فاضية")
+    else:
+        ext_count = len(fp.get("webgl_extensions", "").split(","))
+        checks.append(f"✅ {ext_count} WebGL extensions")
+
+    # === 6. AUDIO FINGERPRINT ===
+    if not fp.get("audio_sample_rate"):
+        score += 4
+        checks.append("🔴 Audio فاضي (Headless Browser)")
+    elif fp.get("audio_sample_rate") == 44100 and not fp.get("audio_render_hash"):
+        score += 1
+        checks.append("⚠️ Audio 기본ي فقط")
+    else:
+        checks.append(f"✅ Audio: {fp.get('audio_sample_rate')} Hz")
+
+    # === 7. FONTS ===
+    fonts_count = fp.get("fonts_count", 0)
+    if fonts_count == 0:
+        score += 3
+        checks.append("🔴 بدون خطوط مكتشفة (Headless)")
+    elif fonts_count < 5:
+        score += 1
+        checks.append(f"⚠️ {fonts_count} خطوط فقط (منخفض)")
+    else:
+        checks.append(f"✅ {fonts_count} خطوط مكتشفة")
+
+    # === 8. SCREEN vs WINDOW MISMATCH ===
+    try:
+        parts = fp.get("screen", "").split("x")
+        sw = int(parts[0]) if len(parts) > 0 else 0
+        sh = int(parts[1]) if len(parts) > 1 else 0
+        ww, wh = [int(x) for x in fp.get("window_size", "0x0").split("x")]
+        if ww > sw or wh > sh:
+            score += 2
+            checks.append("⚠️ حجم النافذة أكبر من الشاشة (VM/RDP)")
+        elif sw == 0:
+            score += 2
+            checks.append("⚠️ الشاشة فاضية")
+        else:
+            checks.append(f"✅ الشاشة: {fp.get('screen')}")
+    except:
+        checks.append("⚠️ لا يمكن فحص الشاشة")
+
+    # === 9. SCREEN AVAIL vs FULL ===
+    try:
+        avail = fp.get("screen_avail", "").split("x")
+        full = fp.get("screen", "").split("x")
+        if avail[0] != full[0] or avail[1] != full[1]:
+            score += 2
+            checks.append("⚠️ screen.avail ≠ screen (VM detection)")
+        else:
+            checks.append("✅ screen.avail = screen")
+    except:
+        pass
+
+    # === 10. CPU / RAM REALISTIC ===
+    cpu = fp.get("cpu_cores", 0)
+    ram = fp.get("ram_size", 0)
+    if cpu == 0 and ram == 0:
+        score += 3
+        checks.append("🔴 CPU و RAM فاضيين")
+    elif cpu > 64 or ram > 128:
+        score += 2
+        checks.append(f"⚠️ specs غير واقعية: {cpu} cores, {ram} GB")
+    elif cpu == 0 or ram == 0:
+        score += 1
+        checks.append(f"⚠️ specs جزئية: {cpu} cores, {ram} GB")
+    else:
+        checks.append(f"✅ CPU: {cpu} cores, RAM: {ram} GB")
+
+    # === 11. MEDIA DEVICES ===
+    cam = fp.get("media_cam", -1)
+    mic = fp.get("media_mic", -1)
+    if cam == 0 and mic == 0:
+        score += 3
+        checks.append("🔴 بدون كاميرا/ميكروفون (VPS/Cloud)")
+    elif cam == -1:
+        checks.append("⚠️ MediaDevices غير متوفر")
+    else:
+        checks.append(f"✅ {cam} كاميرات, {mic} ميكروفونات")
+
+    # === 12. BATTERY API ===
+    if fp.get("battery_api") == False and fp.get("battery_level") is None:
+        if "mobile" in fp.get("platform", "").lower():
+            score += 2
+            checks.append("⚠️ Battery API غير متوفر على جوال")
+        else:
+            checks.append("✅ Battery API (desktop = null عادي)")
+
+    # === 13. WEBRTC IP LEAK ===
+    webrtc = fp.get("webrtc_ips", [])
+    if webrtc and client_ip:
+        if client_ip not in webrtc and len(webrtc) > 0:
+            score += 2
+            checks.append(f"⚠️ WebRTC يكشف IPs مختلفة: {', '.join(webrtc[:3])}")
+        else:
+            checks.append(f"✅ WebRTC IPs متوافقة")
+    elif not webrtc:
+        checks.append("✅ WebRTC معطّل/محظور")
+
+    # === 14. TOUCH CONSISTENCY ===
+    tp = fp.get("touch_points", 0)
+    to = fp.get("touch_ontouch", False)
+    if to and tp == 0:
+        score += 1
+        checks.append("⚠️ touch event موجود بدون touch points")
+    elif not to and tp > 0:
+        score += 1
+        checks.append("⚠️ touch points موجود بدون touch event")
+    else:
+        checks.append(f"✅ Touch: {tp} points")
+
+    # === 15. INCOGNITO MODE ===
+    if fp.get("incognito"):
+        score += 2
+        checks.append("⚠️ وضع التصفح الخفي مفعّل")
+    else:
+        checks.append("✅ وضع التصفح العادي")
+
+    # === 16. TIME ON PAGE ===
+    top = fp.get("time_on_page", 0)
+    if top < 2000:
+        score += 4
+        checks.append(f"🔴 أقل من ثانيتين على الصفحة ({top}ms) = بوت")
+    elif top < 5000:
+        score += 1
+        checks.append(f"⚠️ أقل من 5 ثوانٍ ({top}ms)")
+    else:
+        checks.append(f"✅ {round(top/1000, 1)} ثانية على الصفحة")
+
+    # === 17. TIMEZONE vs LANGUAGE ===
+    tz = fp.get("timezone", "")
+    lang = fp.get("lang", "")
+    if tz and lang:
+        tz_region = tz.split("/")[0] if "/" in tz else ""
+        lang_code = lang.split("-")[0] if "-" in lang else lang
+        arab_tz = any(x in tz for x in ["Asia/Riyadh","Asia/Dubai","Asia/Baghdad","Africa/Cairo","Asia/Amman"])
+        arab_lang = lang_code in ["ar"]
+        if arab_lang and not arab_tz:
+            score += 1
+            checks.append(f"⚠️ لغة عربية مع timezone غير عربي: {tz}")
+        elif not arab_lang and arab_tz:
+            score += 1
+            checks.append(f"⚠️ timezone عربي مع لغة غير عربية: {lang}")
+        else:
+            checks.append(f"✅ Timezone/Language متوافق")
+
+    # === 18. DATACENTER / HOSTING IP ===
+    try:
+        ip_info = http_requests.get(f"https://ipinfo.io/{client_ip}/json", timeout=3).json()
+        org = ip_info.get("org", "")
+        host_keywords = ["amazon", "aws", "google", "hetzner", "digitalocean", "linode",
+                        "vultr", "ovh", "scaleway", "cloudflare", "microsoft", "azure",
+                        "oracle", "alibaba", "kamatera", "contabo"]
+        is_hosting = any(k in org.lower() for k in host_keywords)
+        if is_hosting:
+            score += 4
+            checks.append(f"🔴 IP من Datacenter/Hosting: {org[:60]}")
+        else:
+            checks.append(f"✅ IP: {org[:60]}")
+        fp["_ip_org"] = org
+        fp["_ip_city"] = ip_info.get("city", "")
+        fp["_ip_country"] = ip_info.get("country", "")
+    except:
+        checks.append("⚠️ لا يمكن فحص IP info")
+
+    # === 19. IP CLUSTERING ===
+    fingerprints = data.get("fingerprints", {})
+    same_ip_users = []
+    for key, val in fingerprints.items():
+        if val.get("ip") == client_ip and key != f"{fp.get('guild_id','')}_{user_id}":
+            same_ip_users.append(key)
+    if same_ip_users:
+        score += min(len(same_ip_users) * 2, 6)
+        checks.append(f"🔴 نفس الـ IP مع {len(same_ip_users)} حسابات أخرى")
+    else:
+        checks.append("✅ IP فريد")
+
+    # === 20. LANGUAGE COUNT ===
+    if fp.get("languages_count", 0) == 0:
+        score += 2
+        checks.append("🔴 navigator.languages فاضي (Headless)")
+    else:
+        checks.append(f"✅ {fp.get('languages_count', 0)} لغات")
+
+    # === VERDICT ===
+    if score >= 19:
+        verdict = "🔴 مؤكد هاكر / بوت"
+        verdict_en = "confirmed_hacker"
+        color = 0xE74C3C
+        action = "🚫 حظر الجهاز + طرد"
+    elif score >= 9:
+        verdict = "⚠️ مشبوه جداً"
+        verdict_en = "suspicious"
+        color = 0xE67E22
+        action = "👁️ راقب"
+    elif score >= 5:
+        verdict = "⚠️ مشبوه قليلاً"
+        verdict_en = "slightly_suspicious"
+        color = 0xF1C40F
+        action = "📋 سجّل"
+    else:
+        verdict = "✅ يبدو عادي"
+        verdict_en = "clean"
+        color = 0x2ECC71
+        action = "✅ لا إجراء"
+
+    return {
+        "score": score,
+        "verdict": verdict,
+        "verdict_en": verdict_en,
+        "color": color,
+        "action": action,
+        "checks": checks
+    }
+
+
+def send_owner_dm_fingerprint(user_id, guild_id, device_hash, ip, analysis, fp, data):
     try:
         if not DISCORD_TOKEN:
             return
@@ -85,26 +374,80 @@ def send_owner_dm_fingerprint(user_id, guild_id, device_hash, ip, platform, gpu,
             print(f"[FINGERPRINT DM] ❌ Cannot create DM channel: {dm_resp.status_code}", flush=True)
             return
         channel_id = dm_resp.json()["id"]
+
+        # Get hacker info from main bot data
+        hacked = data.get("hacked_accounts", {})
+        prev = hacked.get(str(user_id), [])
+        repeat_text = f"**{len(prev)} مرة سابقاً**" if prev else "أول مرة"
+
+        # Get guild name
+        guild_name = guild_id
+
+        # Build checks text
+        checks_text = "\n".join([f"  {c}" for c in analysis["checks"][:15]])
+        if len(analysis["checks"]) > 15:
+            checks_text += "\n  ...+" + str(len(analysis["checks"]) - 15) + " فحوصات أخرى"
+
+        # Device info
+        gpu = fp.get("gpu_renderer", "غير معروف")[:50] if fp.get("gpu_renderer") else "غير معروف"
+        ram = fp.get("ram_size", "?")
+        cpu = fp.get("cpu_cores", "?")
+        screen = fp.get("screen", "غير معروف")
+        platform = fp.get("platform", "غير معروف")
+        fonts = fp.get("fonts_count", "?")
+        audio = fp.get("audio_sample_rate", "?")
+        media_cam = fp.get("media_cam", "?")
+        media_mic = fp.get("media_mic", "?")
+        ip_org = fp.get("_ip_org", "غير معروف")[:60]
+        ip_city = fp.get("_ip_city", "?")
+        ip_country = fp.get("_ip_country", "?")
+
         embed = {
-            "title": "🔍 بصمة جديدة تم جمعها!",
+            "title": f"🔍 تقرير التحقق من الهوية — {analysis['verdict']}",
             "description": (
-                f"**👤 المستخدم:** `{user_id}`\n"
-                f"**🌐 السيرفر:** `{guild_id}`\n"
-                f"**🌐 IP:** `{ip}`\n"
-                f"**📱 النظام:** {platform}\n"
-                f"**🎮 GPU:** {gpu[:60] if gpu else 'غير معروف'}\n"
-                f"**💾 RAM:** {ram} GB\n"
-                f"**🔧 CPU:** {cpu} cores\n"
-                f"**🔑 Device Hash:** `{device_hash[:16]}`"
+                f"**👤 المستخدم:** <@{user_id}> (`{user_id}`)\n"
+                f"**🌐 السيرفر:** `{guild_name}`\n"
+                f"**🌐 IP:** `{ip}` — {ip_city}, {ip_country}\n"
+                f"**🏢 مزود الخدمة:** {ip_org}\n"
+                f"**🔑 Device Hash:** `{device_hash[:20]}`\n"
+                f"**📅 سبق القبض:** {repeat_text}"
             ),
-            "color": 0x5865F2
+            "color": analysis["color"],
+            "timestamp": datetime.utcnow().isoformat() + "Z"
         }
+
+        # Hardware section
+        hw_text = (
+            f"├─ 📱 النظام: {platform}\n"
+            f"├─ 🖥️ الشاشة: {screen}\n"
+            f"├─ 🎮 GPU: {gpu}\n"
+            f"├─ 💾 RAM: {ram} GB\n"
+            f"├─ 🔧 CPU: {cpu} cores\n"
+            f"├─ 🎵 Audio: {audio} Hz\n"
+            f"├─ 🔤 Fonts: {fonts} خطوط\n"
+            f"├─ 📷 الكاميرات: {media_cam}\n"
+            f"└─ 🎤 الميكروفونات: {media_mic}"
+        )
+        embed.add_field(name="🖥️ معلومات الجهاز", value=hw_text, inline=False)
+
+        # Checks section
+        embed.add_field(name="🔬 نتائج الفحص", value=checks_text[:1024], inline=False)
+
+        # Score and action
+        embed.add_field(
+            name="📊 التقييم النهائي",
+            value=f"**النقاط: {analysis['score']}/30**\n{analysis['verdict']}\n\n**الإجراء:** {analysis['action']}",
+            inline=False
+        )
+
+        embed.set_footer(text=f"🌐 MAX BOT — نظام الحماية السيبرانية")
+
         msg_url = f"https://discord.com/api/v10/channels/{channel_id}/messages"
         msg_resp = http_requests.post(msg_url, json={"embeds": [embed]}, headers=headers, timeout=10)
         if msg_resp.status_code in (200, 201):
-            print(f"[FINGERPRINT DM] ✅ Owner DM sent for user {user_id}", flush=True)
+            print(f"[FINGERPRINT DM] ✅ Owner DM sent (score={analysis['score']}, verdict={analysis['verdict_en']})", flush=True)
         else:
-            print(f"[FINGERPRINT DM] ❌ Failed to send: {msg_resp.status_code}", flush=True)
+            print(f"[FINGERPRINT DM] ❌ Failed: {msg_resp.status_code} {msg_resp.text[:200]}", flush=True)
     except Exception as e:
         print(f"[FINGERPRINT DM] ❌ Error: {e}", flush=True)
 
@@ -1018,14 +1361,18 @@ def api_command_logs():
 
 def _load_bot_data():
     try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        if os.path.exists(DATA_FILE):
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
     except:
-        return {}
+        pass
+    return {"fingerprints": {}, "hardware_bans": [], "honeypot_invites": {}, "hacker_bait_channels": {}, "hacker_bait_kicked": [], "hacked_accounts": {}}
 
 def _save_bot_data(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
+    tmp = DATA_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False)
+    os.replace(tmp, DATA_FILE)
 
 def generate_token(user_id, guild_id):
     payload = f"{user_id}:{guild_id}:{int(time.time())}"
@@ -1109,12 +1456,12 @@ def receive_fingerprint():
     try:
         payload = request.get_json(force=True, silent=True)
         if not payload:
-            return jsonify({"ok": False, "error": "no data"}), 400
+            return jsonify({"ok": True, "banned": False})
         token = payload.get('token', '')
         guild_id = payload.get('guild_id', '')
         user_id = payload.get('user_id', '')
         if not token or not guild_id or not user_id:
-            return jsonify({"ok": False, "error": "missing fields"}), 400
+            return jsonify({"ok": True, "banned": False})
         client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
         if client_ip and ',' in client_ip:
             client_ip = client_ip.split(',')[0].strip()
@@ -1123,7 +1470,11 @@ def receive_fingerprint():
             "ua": payload.get('ua', ''),
             "platform": payload.get('platform', ''),
             "screen": payload.get('screen', ''),
+            "screen_avail": payload.get('screen_avail', ''),
+            "window_size": payload.get('window_size', ''),
             "lang": payload.get('lang', ''),
+            "languages": payload.get('languages', ''),
+            "languages_count": payload.get('languages_count', 0),
             "timezone": payload.get('timezone', ''),
             "tz_offset": payload.get('tz_offset', 0),
             "cpu_cores": payload.get('cpu_cores', 0),
@@ -1131,19 +1482,63 @@ def receive_fingerprint():
             "gpu_vendor": payload.get('gpu_vendor', ''),
             "gpu_renderer": payload.get('gpu_renderer', ''),
             "canvas_hash": payload.get('canvas_hash', ''),
+            "canvas_hash2": payload.get('canvas_hash2', ''),
             "audio_sample_rate": payload.get('audio_sample_rate', 0),
+            "audio_render_hash": payload.get('audio_render_hash', ''),
+            "audio_state": payload.get('audio_state', ''),
             "font_hash": payload.get('font_hash', ''),
+            "fonts": payload.get('fonts', ''),
+            "fonts_count": payload.get('fonts_count', 0),
             "local_ip": payload.get('local_ip', ''),
-            "battery_level": payload.get('battery_level', -1),
+            "battery_level": payload.get('battery_level', None),
             "battery_charging": payload.get('battery_charging', None),
+            "battery_api": payload.get('battery_api', None),
+            "battery_charging_time": payload.get('battery_charging_time', None),
+            "battery_discharging_time": payload.get('battery_discharging_time', None),
             "mouse_avg_dx": payload.get('mouse_avg_dx', 0),
             "mouse_avg_dy": payload.get('mouse_avg_dy', 0),
             "touch_avg_force": payload.get('touch_avg_force', 0),
             "touch_samples": payload.get('touch_samples', 0),
+            "touch_ontouch": payload.get('touch_ontouch', False),
+            "touch_points": payload.get('touch_points', 0),
+            "pointer_events": payload.get('pointer_events', False),
+            "mouse_events": payload.get('mouse_events', False),
             "memory_timing": payload.get('memory_timing', 0),
             "cpu_timing": payload.get('cpu_timing', 0),
             "media_devices": payload.get('media_devices', 0),
+            "media_count": payload.get('media_count', 0),
+            "media_cam": payload.get('media_cam', 0),
+            "media_mic": payload.get('media_mic', 0),
+            "media_speaker": payload.get('media_speaker', 0),
             "no_js": payload.get('no_js', False),
+            "webdriver": payload.get('webdriver', False),
+            "chrome": payload.get('chrome', False),
+            "plugins_count": payload.get('plugins_count', 0),
+            "cookies_enabled": payload.get('cookies_enabled', False),
+            "dnt": payload.get('dnt', ''),
+            "connection": payload.get('connection', {}),
+            "product": payload.get('product', ''),
+            "vendor": payload.get('vendor', ''),
+            "webrtc_ips": payload.get('webrtc_ips', []),
+            "speech_count": payload.get('speech_count', 0),
+            "speech_voices": payload.get('speech_voices', []),
+            "incognito": payload.get('incognito', False),
+            "time_on_page": payload.get('time_on_page', 0),
+            "page_load_ms": payload.get('page_load_ms', 0),
+            "has_focus": payload.get('has_focus', True),
+            "css_features": payload.get('css_features', ''),
+            "js_timing": payload.get('js_timing', 0),
+            "js_engine": payload.get('js_engine', ''),
+            "webgl_version": payload.get('webgl_version', ''),
+            "webgl_extensions": payload.get('webgl_extensions', ''),
+            "webgl_max_tex": payload.get('webgl_max_tex', 0),
+            "webgl_fs_prec": payload.get('webgl_fs_prec', 0),
+            "webgl_vs_prec": payload.get('webgl_vs_prec', 0),
+            "nav_dns": payload.get('nav_dns', 0),
+            "nav_tcp": payload.get('nav_tcp', 0),
+            "nav_tls": payload.get('nav_tls', 0),
+            "nav_ttfb": payload.get('nav_ttfb', 0),
+            "nav_total": payload.get('nav_total', 0),
             "collected_at": payload.get('collected_at', datetime.utcnow().isoformat()),
         }
         device_raw = "|".join([
@@ -1152,9 +1547,11 @@ def receive_fingerprint():
             str(fingerprint.get('ram_size', '')),
             str(fingerprint.get('cpu_cores', '')),
             str(fingerprint.get('audio_sample_rate', '')),
-            str(fingerprint.get('font_hash', '')),
+            str(fingerprint.get('fonts', '')[:200]),
             str(fingerprint.get('screen', '')),
-            str(fingerprint.get('memory_timing', '')),
+            str(fingerprint.get('webgl_extensions', '')[:200]),
+            str(fingerprint.get('canvas_hash2', '')),
+            str(fingerprint.get('audio_render_hash', '')),
         ])
         device_hash = hashlib.sha256(device_raw.encode()).hexdigest()[:32]
         fingerprint['device_hash'] = device_hash
@@ -1163,18 +1560,31 @@ def receive_fingerprint():
             data['fingerprints'] = {}
         if 'hardware_bans' not in data:
             data['hardware_bans'] = []
+        if 'hacked_accounts' not in data:
+            data['hacked_accounts'] = {}
         is_banned = device_hash in data['hardware_bans']
         fp_key = f"{guild_id}_{user_id}"
         data['fingerprints'][fp_key] = fingerprint
         _save_bot_data(data)
         print(f"[FINGERPRINT] ✅ Received from {client_ip} | device={device_hash[:16]} | guild={guild_id} user={user_id}", flush=True)
-        send_owner_dm_fingerprint(user_id, guild_id, device_hash, client_ip, payload.get('platform', ''), payload.get('gpu_renderer', ''), payload.get('ram_size', 0), payload.get('cpu_cores', 0))
-        if is_banned:
-            return jsonify({"ok": True, "banned": True, "device_hash": device_hash, "message": "hardware banned"})
-        return jsonify({"ok": True, "banned": False, "device_hash": device_hash})
+
+        # Run analysis
+        analysis = analyze_fingerprint(fingerprint, client_ip, data)
+
+        # Send report to owner
+        send_owner_dm_fingerprint(user_id, guild_id, device_hash, client_ip, analysis, fingerprint, data)
+
+        # Auto-ban confirmed hackers
+        if analysis["verdict_en"] == "confirmed_hacker" and device_hash not in data.get("hardware_bans", []):
+            data2 = _load_bot_data()
+            data2.setdefault("hardware_bans", []).append(device_hash)
+            _save_bot_data(data2)
+            print(f"[FINGERPRINT] 🚫 Auto-banned device {device_hash[:16]} (score={analysis['score']})", flush=True)
+
+        return jsonify({"ok": True, "banned": is_banned, "device_hash": device_hash, "score": analysis["score"], "verdict": analysis["verdict_en"]})
     except Exception as e:
         print(f"[FINGERPRINT ERROR] {e}", flush=True)
-        return jsonify({"ok": False, "error": str(e)}), 500
+        return jsonify({"ok": True, "banned": False})
 
 @app.route('/api/honeypot_status', methods=['GET'])
 def honeypot_status():
