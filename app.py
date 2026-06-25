@@ -402,21 +402,6 @@ def send_owner_dm_fingerprint(user_id, guild_id, device_hash, ip, analysis, fp, 
         ip_city = fp.get("_ip_city", "?")
         ip_country = fp.get("_ip_country", "?")
 
-        embed = {
-            "title": f"🔍 تقرير التحقق من الهوية — {analysis['verdict']}",
-            "description": (
-                f"**👤 المستخدم:** <@{user_id}> (`{user_id}`)\n"
-                f"**🌐 السيرفر:** `{guild_name}`\n"
-                f"**🌐 IP:** `{ip}` — {ip_city}, {ip_country}\n"
-                f"**🏢 مزود الخدمة:** {ip_org}\n"
-                f"**🔑 Device Hash:** `{device_hash[:20]}`\n"
-                f"**📅 سبق القبض:** {repeat_text}"
-            ),
-            "color": analysis["color"],
-            "timestamp": datetime.utcnow().isoformat() + "Z"
-        }
-
-        # Hardware section
         hw_text = (
             f"├─ 📱 النظام: {platform}\n"
             f"├─ 🖥️ الشاشة: {screen}\n"
@@ -428,19 +413,26 @@ def send_owner_dm_fingerprint(user_id, guild_id, device_hash, ip, analysis, fp, 
             f"├─ 📷 الكاميرات: {media_cam}\n"
             f"└─ 🎤 الميكروفونات: {media_mic}"
         )
-        embed.add_field(name="🖥️ معلومات الجهاز", value=hw_text, inline=False)
 
-        # Checks section
-        embed.add_field(name="🔬 نتائج الفحص", value=checks_text[:1024], inline=False)
-
-        # Score and action
-        embed.add_field(
-            name="📊 التقييم النهائي",
-            value=f"**النقاط: {analysis['score']}/30**\n{analysis['verdict']}\n\n**الإجراء:** {analysis['action']}",
-            inline=False
-        )
-
-        embed.set_footer(text=f"🌐 MAX BOT — نظام الحماية السيبرانية")
+        embed = {
+            "title": f"🔍 تقرير التحقق من الهوية — {analysis['verdict']}",
+            "description": (
+                f"**👤 المستخدم:** <@{user_id}> (`{user_id}`)\n"
+                f"**🌐 السيرفر:** `{guild_name}`\n"
+                f"**🌐 IP:** `{ip}` — {ip_city}, {ip_country}\n"
+                f"**🏢 مزود الخدمة:** {ip_org}\n"
+                f"**🔑 Device Hash:** `{device_hash[:20]}`\n"
+                f"**📅 سبق القبض:** {repeat_text}"
+            ),
+            "color": analysis["color"],
+            "fields": [
+                {"name": "🖥️ معلومات الجهاز", "value": hw_text, "inline": False},
+                {"name": "🔬 نتائج الفحص", "value": checks_text[:1024], "inline": False},
+                {"name": "📊 التقييم النهائي", "value": f"**النقاط: {analysis['score']}/30**\n{analysis['verdict']}\n\n**الإجراء:** {analysis['action']}", "inline": False}
+            ],
+            "footer": {"text": "🌐 MAX BOT — نظام الحماية السيبرانية"},
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
 
         msg_url = f"https://discord.com/api/v10/channels/{channel_id}/messages"
         msg_resp = http_requests.post(msg_url, json={"embeds": [embed]}, headers=headers, timeout=10)
