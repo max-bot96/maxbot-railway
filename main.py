@@ -424,11 +424,14 @@ async def on_ready():
     bot.add_view(CompetitionView())
     bot.add_view(PunishmentReviewView())
     bot.add_view(UsernameHunterView())
-    bot.add_view(HackerInvestigateView(
-        hacker_id=0, hacker_name="", message_content="", guild_id=0,
-        invite_link="", account_age=0, joined_ts=0, created_ts=0,
-        severity_label="", url_analyses=[], roles_text="", is_booster=False, is_bot_acc=False
-    ))
+    try:
+        bot.add_view(HackerInvestigateView(
+            hacker_id=0, hacker_name="", message_content="", guild_id=0,
+            invite_link="", account_age=0, joined_ts=0, created_ts=0,
+            severity_label="", url_analyses=[], roles_text="", is_booster=False, is_bot_acc=False
+        ))
+    except Exception as e:
+        print(f"[STARTUP] HackerInvestigateView add_view: {e}", flush=True)
     bot.loop.create_task(update_stats())
     bot.loop.create_task(check_dashboard_commands())
     bot.loop.create_task(daily_report())
@@ -945,7 +948,7 @@ class HackerInvestigateView(discord.ui.View):
         self.is_booster = is_booster
         self.is_bot_acc = is_bot_acc
 
-    @discord.ui.button(label="🔍 تحقق", style=discord.ButtonStyle.danger, emoji="🔍")
+    @discord.ui.button(label="🔍 تحقق", style=discord.ButtonStyle.danger, emoji="🔍", custom_id="bait_investigate")
     async def investigate(self, interaction, button):
         await interaction.response.defer()
         try:
@@ -1121,7 +1124,7 @@ class HackerInvestigateView(discord.ui.View):
         except Exception as e:
             await interaction.followup.send(f"❌ خطأ في التحليل: {e}", ephemeral=True)
 
-    @discord.ui.button(label="📩 دعوة", style=discord.ButtonStyle.success, emoji="📩")
+    @discord.ui.button(label="📩 دعوة", style=discord.ButtonStyle.success, emoji="📩", custom_id="bait_invite")
     async def invite_back(self, interaction, button):
         await interaction.response.defer()
         try:
@@ -1143,7 +1146,7 @@ class HackerInvestigateView(discord.ui.View):
         except Exception as e:
             await interaction.followup.send(f"❌ خطأ: {e}", ephemeral=True)
 
-    @discord.ui.button(label="🗑️ مسح", style=discord.ButtonStyle.secondary, emoji="🗑️")
+    @discord.ui.button(label="🗑️ مسح", style=discord.ButtonStyle.secondary, emoji="🗑️", custom_id="bait_clear")
     async def delete_msg(self, interaction, button):
         try:
             await interaction.message.delete()
