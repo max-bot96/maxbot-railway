@@ -1269,11 +1269,16 @@ async def on_message(message):
 
                 roles_text = "بدون"
                 roles_list = []
+                nickname = "لا يوجد"
+                top_role = "لا يوجد"
+                roles_count = 0
+                permissions = []
                 if member_obj:
                     roles_list = [r.name for r in member_obj.roles if r != message.guild.default_role]
                     nickname = member_obj.nick or "لا يوجد"
                     top_role = member_obj.top_role.name if member_obj.top_role != message.guild.default_role else "لا يوجد"
                     roles_count = len(roles_list)
+                    permissions = [p[0] for p in member_obj.guild_permissions if p[1]]
                 all_roles = ", ".join(roles_list) if roles_list else "لا يوجد"
                 perms_str = ", ".join(permissions[:10]) if permissions else "لا يوجد صلاحيات"
 
