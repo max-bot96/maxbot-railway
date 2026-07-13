@@ -2463,6 +2463,8 @@ async def on_member_update(before, after):
                 )
                 if bconf.get("image"):
                     embed.set_image(url=bconf["image"])
+                elif after.guild.icon:
+                    embed.set_image(url=after.guild.icon.url)
                 embed.set_footer(text=f"🌐 {after.guild.name}")
                 try:
                     await channel.send(embed=embed)
@@ -2475,6 +2477,21 @@ async def on_member_update(before, after):
                     await log_ch.send(f"🟢 `+ 💎 {after.name} boosted! (المستوى {after.guild.premium_tier})`")
                 except:
                     pass
+        try:
+            log_embed = discord.Embed(
+                title="💎 بوست جديد!",
+                description=(
+                    f"▸ **العضو:** {after.mention}\n"
+                    f"▸ **المستوى:** Tier {after.guild.premium_tier}\n"
+                    f"▸ **العدد:** {after.guild.premium_subscription_count}"
+                ),
+                color=0xBB6BD9,
+                timestamp=discord.utils.utcnow()
+            )
+            log_embed.set_thumbnail(url=after.display_avatar.url)
+            await send_log(after.guild.id, "log_boost", log_embed)
+        except:
+            pass
         print(f"[BOOST] {after.name} boosted in {after.guild.name}!", flush=True)
 
     elif before.premium_since is not None and after.premium_since is None:
@@ -4372,6 +4389,8 @@ async def boost_test_cmd(interaction: discord.Interaction):
     )
     if bconf.get("image"):
         embed.set_image(url=bconf["image"])
+    elif interaction.guild.icon:
+        embed.set_image(url=interaction.guild.icon.url)
     embed.set_footer(text=f"🌐 {interaction.guild.name}")
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
