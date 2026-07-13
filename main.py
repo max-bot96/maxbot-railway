@@ -2461,8 +2461,8 @@ async def on_member_update(before, after):
                     color=color,
                     timestamp=discord.utils.utcnow()
                 )
-                if after.guild.icon:
-                    embed.set_image(url=after.guild.icon.url)
+                if bconf.get("image"):
+                    embed.set_image(url=bconf["image"])
                 embed.set_footer(text=f"🌐 {after.guild.name}")
                 try:
                     await channel.send(embed=embed)
@@ -4370,8 +4370,8 @@ async def boost_test_cmd(interaction: discord.Interaction):
         color=color,
         timestamp=discord.utils.utcnow()
     )
-    if interaction.guild.icon:
-        embed.set_image(url=interaction.guild.icon.url)
+    if bconf.get("image"):
+        embed.set_image(url=bconf["image"])
     embed.set_footer(text=f"🌐 {interaction.guild.name}")
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
