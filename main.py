@@ -2441,6 +2441,11 @@ async def on_member_update(before, after):
             if channel:
                 bar, progress_text, _ = calculate_boost_progress(after.guild)
                 color = get_boost_color(after.guild)
+                role_text = ""
+                if bconf.get("role_id"):
+                    role = after.guild.get_role(bconf["role_id"])
+                    if role:
+                        role_text = f"\n🎭 **الرتبة الممنوحة:** {role.mention}"
                 embed = discord.Embed(
                     title="💎 ─── SERVER BOOST DETECTED ─── 💎",
                     description=(
@@ -2451,6 +2456,7 @@ async def on_member_update(before, after):
                         f"▸ **Next Goal**      ::  `{bar}` [ {progress_text} ]\n\n"
                         f"〢 ───────────────────── 〢\n\n"
                         f"✨ **شكراً لك يا {after.name}! تم منحك الرتبة وصلاحيات النشر السريع تلقائياً.**"
+                        f"{role_text}"
                     ),
                     color=color,
                     timestamp=discord.utils.utcnow()
@@ -4340,8 +4346,14 @@ async def boost_test_cmd(interaction: discord.Interaction):
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ هذا الأمر للمسؤولين فقط!", ephemeral=True)
         return
+    bconf = boost_config.get(interaction.guild_id, {})
     bar, progress_text, _ = calculate_boost_progress(interaction.guild)
     color = get_boost_color(interaction.guild)
+    role_text = ""
+    if bconf.get("role_id"):
+        role = interaction.guild.get_role(bconf["role_id"])
+        if role:
+            role_text = f"\n🎭 **الرتبة الممنوحة:** {role.mention}"
     embed = discord.Embed(
         title="💎 ─── SERVER BOOST DETECTED ─── 💎 (تجريبي)",
         description=(
@@ -4352,6 +4364,7 @@ async def boost_test_cmd(interaction: discord.Interaction):
             f"▸ **Next Goal**      ::  `{bar}` [ {progress_text} ]\n\n"
             f"〢 ───────────────────── 〢\n\n"
             f"✨ **شكراً لك يا {interaction.user.name}! تم منحك الرتبة وصلاحيات النشر السريع تلقائياً.**"
+            f"{role_text}"
         ),
         color=color,
         timestamp=discord.utils.utcnow()
