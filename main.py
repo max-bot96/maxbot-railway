@@ -530,7 +530,8 @@ async def _ensure_ollama():
         print("[OLLAMA] Not found - AI responses will use fallback", flush=True)
         return
     try:
-        proc = subprocess.Popen([ollama_path, "serve"], creationflags=subprocess.CREATE_NO_WINDOW)
+        _creation_flags = {"creationflags": subprocess.CREATE_NO_WINDOW} if hasattr(subprocess, "CREATE_NO_WINDOW") else {}
+        proc = subprocess.Popen([ollama_path, "serve"], **_creation_flags)
         print(f"[OLLAMA] Server started (PID {proc.pid})", flush=True)
         await asyncio.sleep(3)
         import httpx
@@ -4180,11 +4181,18 @@ async def update_bot_prefix(ctx):
         return
     await ctx.send("♻️ **جاري إعادة تشغيل البوت...**")
     import subprocess
-    subprocess.Popen(
-        ["cmd", "/c", "timeout /t 2 /nobreak >nul && set PYTHONUNBUFFERED=1 && python.exe -u main.py"],
-        cwd=r"C:\Users\USER\Desktop\z1-pro",
-        creationflags=subprocess.CREATE_NO_WINDOW
-    )
+    _creation_flags = {"creationflags": subprocess.CREATE_NO_WINDOW} if hasattr(subprocess, "CREATE_NO_WINDOW") else {}
+    if sys.platform == "win32":
+        subprocess.Popen(
+            ["cmd", "/c", "timeout /t 2 /nobreak >nul && set PYTHONUNBUFFERED=1 && python.exe -u main.py"],
+            cwd=r"C:\Users\USER\Desktop\z1-pro",
+            **_creation_flags
+        )
+    else:
+        subprocess.Popen(
+            ["bash", "-c", "sleep 2 && PYTHONUNBUFFERED=1 python3 -u main.py"],
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+        )
     await bot.close()
 
 @bot.tree.command(name="welcome", description="إعداد الترحيب (القناة + الرسالة + الصورة)")
@@ -4222,11 +4230,18 @@ async def update_bot(interaction: discord.Interaction):
         return
     await interaction.response.send_message("♻️ **جاري إعادة تشغيل البوت...**")
     import subprocess
-    subprocess.Popen(
-        ["cmd", "/c", "timeout /t 2 /nobreak >nul && set PYTHONUNBUFFERED=1 && python.exe -u main.py"],
-        cwd=r"C:\Users\USER\Desktop\z1-pro",
-        creationflags=subprocess.CREATE_NO_WINDOW
-    )
+    _creation_flags2 = {"creationflags": subprocess.CREATE_NO_WINDOW} if hasattr(subprocess, "CREATE_NO_WINDOW") else {}
+    if sys.platform == "win32":
+        subprocess.Popen(
+            ["cmd", "/c", "timeout /t 2 /nobreak >nul && set PYTHONUNBUFFERED=1 && python.exe -u main.py"],
+            cwd=r"C:\Users\USER\Desktop\z1-pro",
+            **_creation_flags2
+        )
+    else:
+        subprocess.Popen(
+            ["bash", "-c", "sleep 2 && PYTHONUNBUFFERED=1 python3 -u main.py"],
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+        )
     await bot.close()
 
 # ════════════════════════════════════════
