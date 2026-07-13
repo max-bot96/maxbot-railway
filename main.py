@@ -1681,16 +1681,21 @@ class HackerInvestigateView(discord.ui.View):
             await interaction.followup.send(f"❌ خطأ في فحص الـ honeypot: {e}", ephemeral=True)
 
 def calculate_boost_progress(guild):
-    tier = guild.premium_tier
     count = guild.premium_subscription_count or 0
-    if tier == 0:
-        return f"{count}/2 للمستوى التالي"
-    elif tier == 1:
-        return f"{count}/7 للمستوى التالي"
-    elif tier == 2:
-        return f"{count}/14 للمستوى التالي"
-    else:
-        return "🏆 أعلى مستوى!"
+    tiers = [(2, "Tier 1"), (7, "Tier 2"), (14, "Tier 3")]
+    for needed, tier_name in tiers:
+        if count < needed:
+            filled = int((count / needed) * 10)
+            bar = "█" * filled + "░" * (10 - filled)
+            return bar, f"{count}/{needed}", tier_name
+    return "🏆", "MAX", "Tier 3"
+
+def get_boost_color(guild):
+    count = guild.premium_subscription_count or 0
+    if count >= 14: return 0xFFD700
+    if count >= 7:  return 0x9B59B6
+    if count >= 2:  return 0xBB6BD9
+    return 0xFF69B4
 
 @bot.event
 async def on_message(message):
@@ -2434,21 +2439,23 @@ async def on_member_update(before, after):
         if bconf.get("channel_id"):
             channel = after.guild.get_channel(bconf["channel_id"])
             if channel:
-                color = int(bconf.get("color", "FF73FA").replace("#", ""), 16)
+                bar, progress_text, _ = calculate_boost_progress(after.guild)
+                color = get_boost_color(after.guild)
                 embed = discord.Embed(
-                    title="💎 ¡ BOOST ¡ 💎",
+                    title="💎 ─── SERVER BOOST DETECTED ─── 💎",
                     description=(
-                        f"**{after.mention} قام بدعم السيرفر!**\n\n"
-                        f"🚀 المستوى: {after.guild.premium_tier}\n"
-                        f"👥 عدد البوسترز: {after.guild.premium_subscription_count}\n"
-                        f"📈 التقدم: {calculate_boost_progress(after.guild)}\n\n"
-                        f"💎 شكرًا لك يا {after.name}!"
+                        f"{after.mention} **بثّ الحياة في مجتمعنا بدعم جديد!**\n\n"
+                        f"〢 ─── STATUS REPORT ─── 〢\n\n"
+                        f"▸ **Current Tier**   ::  [ Tier {after.guild.premium_tier} ]\n"
+                        f"▸ **Total Boosts**   ::  [ {after.guild.premium_subscription_count} Boosters ]\n"
+                        f"▸ **Next Goal**      ::  `{bar}` [ {progress_text} ]\n\n"
+                        f"〢 ───────────────────── 〢\n\n"
+                        f"✨ **شكراً لك يا {after.name}! تم منحك الرتبة وصلاحيات النشر السريع تلقائياً.**"
                     ),
                     color=color,
                     timestamp=discord.utils.utcnow()
                 )
-                if bconf.get("image"):
-                    embed.set_thumbnail(url=bconf["image"])
+                embed.set_image(url=after.display_avatar.url)
                 embed.set_footer(text=f"🌐 {after.guild.name}")
                 try:
                     await channel.send(embed=embed)
@@ -4293,8 +4300,10 @@ async def boost_show_cmd(interaction: discord.Interaction):
     embed.add_field(name="🎭 رتبة البوسترز", value=rl, inline=True)
     embed.add_field(name="📋 قناة السجل", value=lc, inline=True)
     embed.add_field(name="🎨 اللون", value=cl, inline=True)
-    embed.add_field(name="🚀 المستوى الحالي", value=str(interaction.guild.premium_tier), inline=True)
+    bar, progress_text, _ = calculate_boost_progress(interaction.guild)
+    embed.add_field(name="🚀 المستوى الحالي", value=f"Tier {interaction.guild.premium_tier}", inline=True)
     embed.add_field(name="👥 عدد البوسترز", value=str(interaction.guild.premium_subscription_count), inline=True)
+    embed.add_field(name="📈 التقدم", value=f"`{bar}` {progress_text}", inline=False)
     embed.set_footer(text="MAX BOT • Boost System")
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -4331,22 +4340,23 @@ async def boost_test_cmd(interaction: discord.Interaction):
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ هذا الأمر للمسؤولين فقط!", ephemeral=True)
         return
-    bconf = boost_config.get(interaction.guild_id, {})
-    color = int(bconf.get("color", "FF73FA").replace("#", ""), 16)
-    custom_msg = bconf.get("message")
-    if custom_msg:
-        text = custom_msg.replace("{user}", interaction.user.mention).replace("{tier}", str(interaction.guild.premium_tier)).replace("{count}", str(interaction.guild.premium_subscription_count)).replace("{progress}", calculate_boost_progress(interaction.guild))
-    else:
-        text = (
-            f"**{interaction.user.mention} قام بدعم السيرفر!**\n\n"
-            f"🚀 المستوى: {interaction.guild.premium_tier}\n"
-            f"👥 عدد البوسترز: {interaction.guild.premium_subscription_count}\n"
-            f"📈 التقدم: {calculate_boost_progress(interaction.guild)}\n\n"
-            f"💎 شكرًا لك يا {interaction.user.name}!"
-        )
-    embed = discord.Embed(title="💎 ¡ BOOST ¡ 💎 (تجريبي)", description=text, color=color, timestamp=discord.utils.utcnow())
-    if bconf.get("image"):
-        embed.set_thumbnail(url=bconf["image"])
+    bar, progress_text, _ = calculate_boost_progress(interaction.guild)
+    color = get_boost_color(interaction.guild)
+    embed = discord.Embed(
+        title="💎 ─── SERVER BOOST DETECTED ─── 💎 (تجريبي)",
+        description=(
+            f"{interaction.user.mention} **بثّ الحياة في مجتمعنا بدعم جديد!**\n\n"
+            f"〢 ─── STATUS REPORT ─── 〢\n\n"
+            f"▸ **Current Tier**   ::  [ Tier {interaction.guild.premium_tier} ]\n"
+            f"▸ **Total Boosts**   ::  [ {interaction.guild.premium_subscription_count} Boosters ]\n"
+            f"▸ **Next Goal**      ::  `{bar}` [ {progress_text} ]\n\n"
+            f"〢 ───────────────────── 〢\n\n"
+            f"✨ **شكراً لك يا {interaction.user.name}! تم منحك الرتبة وصلاحيات النشر السريع تلقائياً.**"
+        ),
+        color=color,
+        timestamp=discord.utils.utcnow()
+    )
+    embed.set_image(url=interaction.user.display_avatar.url)
     embed.set_footer(text=f"🌐 {interaction.guild.name}")
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -10404,7 +10414,8 @@ async def احصائيات(ctx):
     # Boost
     boost_level = guild.premium_tier
     boost_count = guild.premium_subscription_count
-    embed.add_field(name="🚀 البوست", value=f"المستوى: {boost_level}\nالعدد: {boost_count}", inline=True)
+    bar, progress_text, _ = calculate_boost_progress(guild)
+    embed.add_field(name="🚀 البوست", value=f"المستوى: Tier {boost_level}\nالعدد: {boost_count}\nالتقدم: `{bar}` {progress_text}", inline=True)
 
     await ctx.send(embed=embed)
 
