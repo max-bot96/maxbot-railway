@@ -575,11 +575,12 @@ async def _after_ready():
     for g in bot.guilds:
         try:
             await bot.tree.sync(guild=g)
-        except:
-            pass
+            print(f"[STARTUP] ✅ Guild tree synced for {g.name}", flush=True)
+        except Exception as e:
+            print(f"[STARTUP] ❌ Guild sync failed for {g.name}: {e}", flush=True)
     try:
-        await bot.tree.sync()
-        print("[STARTUP] ✅ Global tree synced", flush=True)
+        synced = await bot.tree.sync()
+        print(f"[STARTUP] ✅ Global tree synced — {len(synced)} commands", flush=True)
     except Exception as e:
         print(f"[STARTUP] ❌ Global tree sync failed: {e}", flush=True)
     try:
