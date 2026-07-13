@@ -4392,7 +4392,14 @@ async def boost_test_cmd(interaction: discord.Interaction):
     elif interaction.guild.icon:
         embed.set_image(url=interaction.guild.icon.url)
     embed.set_footer(text=f"🌐 {interaction.guild.name}")
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    bconf2 = boost_config.get(interaction.guild_id, {})
+    if bconf2.get("channel_id"):
+        ch = interaction.guild.get_channel(bconf2["channel_id"])
+        if ch:
+            await ch.send(embed=embed)
+            await interaction.response.send_message(f"✅ تم إرسال الرسالة في {ch.mention}", ephemeral=True)
+            return
+    await interaction.response.send_message(embed=embed)
 
 # ════════════════════════════════════════
 # أمر اللوق (إنشاء رومات اللوق تلقائياً)
