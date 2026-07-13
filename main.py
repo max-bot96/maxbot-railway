@@ -577,6 +577,11 @@ async def _after_ready():
         except:
             pass
     try:
+        await bot.tree.sync()
+        print("[STARTUP] ✅ Global tree synced", flush=True)
+    except Exception as e:
+        print(f"[STARTUP] ❌ Global tree sync failed: {e}", flush=True)
+    try:
         export_commands_to_json()
     except Exception as e:
         print(f"[EXPORT COMMANDS ERROR] {e}", flush=True)
