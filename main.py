@@ -225,6 +225,7 @@ whitelist_manager = WhitelistManager()
 competitions = {}
 pending_punishments = {}
 _pending_role_changes = set()
+boost_config = {}
 
 BAD_WORDS_DEFAULT = ["كس", "شرموط", "منيوك", "خرة", "عاهة", "قحبة", "عرص"]
 
@@ -232,7 +233,7 @@ def load_data():
     global link_blocker_enabled, log_channels, protections, bad_words_list, secret_users, mod_room_channel_id
     global welcome_config, xp_data, economy_data, suggestion_config, afk_users, afk_voice_channels, reaction_role_config, level_rewards, shop_items, custom_commands, competitions, pending_punishments
     global ticket_image, music_control_config, activity_tracking_enabled, hacker_bait_channels, ticket_log_channels_loaded, ticket_categories_data, _quiz_scores_cache, TICKET_ROLE_ACCESS, username_hunter_data
-    global custom_blacklist, dynamic_blacklist, target_list, proxies_list, hardware_bans, fingerprints, used_tokens
+    global custom_blacklist, dynamic_blacklist, target_list, proxies_list, hardware_bans, fingerprints, used_tokens, boost_config
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -292,6 +293,7 @@ def load_data():
             hardware_bans = data.get("hardware_bans", [])
             fingerprints = data.get("fingerprints", {})
             used_tokens = data.get("used_tokens", [])
+            boost_config = data.get("boost_config", {})
     except (FileNotFoundError, json.JSONDecodeError):
         link_blocker_enabled = {}
         log_channels = {}
@@ -321,6 +323,7 @@ def load_data():
         hardware_bans = []
         fingerprints = {}
         used_tokens = []
+        boost_config = {}
 
 _data_dirty = False
 _last_save_time = 0
@@ -384,7 +387,8 @@ def _do_save_data():
             "proxies_list": proxies_list,
             "hardware_bans": hardware_bans,
             "fingerprints": fingerprints,
-            "used_tokens": used_tokens
+            "used_tokens": used_tokens,
+            "boost_config": boost_config
         }, f, ensure_ascii=False)
     save_to_github()
 
@@ -1669,6 +1673,18 @@ class HackerInvestigateView(discord.ui.View):
         except Exception as e:
             await interaction.followup.send(f"❌ خطأ في فحص الـ honeypot: {e}", ephemeral=True)
 
+def calculate_boost_progress(guild):
+    tier = guild.premium_tier
+    count = guild.premium_subscription_count or 0
+    if tier == 0:
+        return f"{count}/2 للمستوى التالي"
+    elif tier == 1:
+        return f"{count}/7 للمستوى التالي"
+    elif tier == 2:
+        return f"{count}/14 للمستوى التالي"
+    else:
+        return "🏆 أعلى مستوى!"
+
 @bot.event
 async def on_message(message):
     if message.author.bot and not message.webhook_id:
@@ -2397,6 +2413,66 @@ async def on_message(message):
 @bot.event
 async def on_member_update(before, after):
     guild_id = after.guild.id
+
+    # ── كشف البوست ──
+    if before.premium_since is None and after.premium_since is not None:
+        bconf = boost_config.get(guild_id, {})
+        if bconf.get("role_id"):
+            role = after.guild.get_role(bconf["role_id"])
+            if role:
+                try:
+                    await after.add_roles(role, reason="Nitro Boost")
+                except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+                    pass
+        if bconf.get("channel_id"):
+            channel = after.guild.get_channel(bconf["channel_id"])
+            if channel:
+                color = int(bconf.get("color", "FF73FA").replace("#", ""), 16)
+                embed = discord.Embed(
+                    title="💎 ¡ BOOST ¡ 💎",
+                    description=(
+                        f"**{after.mention} قام بدعم السيرفر!**\n\n"
+                        f"🚀 المستوى: {after.guild.premium_tier}\n"
+                        f"👥 عدد البوسترز: {after.guild.premium_subscription_count}\n"
+                        f"📈 التقدم: {calculate_boost_progress(after.guild)}\n\n"
+                        f"💎 شكرًا لك يا {after.name}!"
+                    ),
+                    color=color,
+                    timestamp=discord.utils.utcnow()
+                )
+                if bconf.get("image"):
+                    embed.set_thumbnail(url=bconf["image"])
+                embed.set_footer(text=f"🌐 {after.guild.name}")
+                try:
+                    await channel.send(embed=embed)
+                except:
+                    pass
+        if bconf.get("log_channel"):
+            log_ch = after.guild.get_channel(bconf["log_channel"])
+            if log_ch:
+                try:
+                    await log_ch.send(f"🟢 `+ 💎 {after.name} boosted! (المستوى {after.guild.premium_tier})`")
+                except:
+                    pass
+        print(f"[BOOST] {after.name} boosted in {after.guild.name}!", flush=True)
+
+    elif before.premium_since is not None and after.premium_since is None:
+        bconf = boost_config.get(guild_id, {})
+        if bconf.get("role_id"):
+            role = after.guild.get_role(bconf["role_id"])
+            if role and role in after.roles:
+                try:
+                    await after.remove_roles(role, reason="Boost ended")
+                except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+                    pass
+        if bconf.get("log_channel"):
+            log_ch = after.guild.get_channel(bconf["log_channel"])
+            if log_ch:
+                try:
+                    await log_ch.send(f"🔴 `- 💎 {after.name} توقف عن البوست`")
+                except:
+                    pass
+        print(f"[BOOST] {after.name} unboosted in {after.guild.name}!", flush=True)
 
     # Debug: role change detection
     if before.roles != after.roles:
@@ -4149,6 +4225,121 @@ async def update_bot(interaction: discord.Interaction):
     await bot.close()
 
 # ════════════════════════════════════════
+# نظام البوستات (Boost System)
+# ════════════════════════════════════════
+
+@bot.tree.command(name="boost_set", description="ضبط إعدادات نظام البوستات")
+@discord.app_commands.describe(
+    channel="قناة ترحيب البوست",
+    role="رتبة البوسترز",
+    log_channel="قناة سجل البوستات",
+    color="لون الـ embed (hex بدون #)"
+)
+async def boost_set_cmd(
+    interaction: discord.Interaction,
+    channel: discord.TextChannel = None,
+    role: discord.Role = None,
+    log_channel: discord.TextChannel = None,
+    color: str = None
+):
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ هذا الأمر للمسؤولين فقط!", ephemeral=True)
+        return
+    guild_id = interaction.guild_id
+    bconf = boost_config.get(guild_id, {})
+    if channel:
+        bconf["channel_id"] = channel.id
+    if role:
+        bconf["role_id"] = role.id
+    if log_channel:
+        bconf["log_channel"] = log_channel.id
+    if color:
+        bconf["color"] = color.replace("#", "")
+    boost_config[guild_id] = bconf
+    mark_data_dirty()
+    save_data(force=True)
+    embed = discord.Embed(title="⚙️ تم ضبط إعدادات البوست", color=0xFF73FA)
+    if channel:
+        embed.add_field(name="💎 قناة الترحيب", value=channel.mention, inline=True)
+    if role:
+        embed.add_field(name="🎭 رتبة البوسترز", value=role.mention, inline=True)
+    if log_channel:
+        embed.add_field(name="📋 قناة السجل", value=log_channel.mention, inline=True)
+    if color:
+        embed.add_field(name="🎨 اللون", value=f"#{color}", inline=True)
+    embed.set_footer(text="MAX BOT • Boost System")
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+@bot.tree.command(name="boost_show", description="عرض إعدادات نظام البوستات")
+async def boost_show_cmd(interaction: discord.Interaction):
+    bconf = boost_config.get(interaction.guild_id, {})
+    ch = f"<#{bconf['channel_id']}>" if bconf.get("channel_id") else "غير محدد"
+    rl = f"<@&{bconf['role_id']}>" if bconf.get("role_id") else "غير محدد"
+    lc = f"<#{bconf['log_channel']}>" if bconf.get("log_channel") else "غير محدد"
+    cl = f"#{bconf.get('color', 'FF73FA')}"
+    embed = discord.Embed(title="⚙️ إعدادات نظام البوستات", color=0xFF73FA)
+    embed.add_field(name="💎 قناة الترحيب", value=ch, inline=True)
+    embed.add_field(name="🎭 رتبة البوسترز", value=rl, inline=True)
+    embed.add_field(name="📋 قناة السجل", value=lc, inline=True)
+    embed.add_field(name="🎨 اللون", value=cl, inline=True)
+    embed.add_field(name="🚀 المستوى الحالي", value=str(interaction.guild.premium_tier), inline=True)
+    embed.add_field(name="👥 عدد البوسترز", value=str(interaction.guild.premium_subscription_count), inline=True)
+    embed.set_footer(text="MAX BOT • Boost System")
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+@bot.tree.command(name="boost_message", description="تحديث رسالة ترحيب البوست")
+@discord.app_commands.describe(message="نص الرسالة (المتغيرات: {user}, {tier}, {count}, {progress})")
+async def boost_message_cmd(interaction: discord.Interaction, message: str):
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ هذا الأمر للمسؤولين فقط!", ephemeral=True)
+        return
+    guild_id = interaction.guild_id
+    bconf = boost_config.get(guild_id, {})
+    bconf["message"] = message
+    boost_config[guild_id] = bconf
+    mark_data_dirty()
+    save_data(force=True)
+    await interaction.response.send_message(f"✅ تم تحديث رسالة البوست!\n\n**الرسالة الحالية:**\n{message}", ephemeral=True)
+
+@bot.tree.command(name="boost_image", description="تحديث صورة الـ embed")
+@discord.app_commands.describe(url="رابط الصورة")
+async def boost_image_cmd(interaction: discord.Interaction, url: str):
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ هذا الأمر للمسؤولين فقط!", ephemeral=True)
+        return
+    guild_id = interaction.guild_id
+    bconf = boost_config.get(guild_id, {})
+    bconf["image"] = url
+    boost_config[guild_id] = bconf
+    mark_data_dirty()
+    save_data(force=True)
+    await interaction.response.send_message("✅ تم تحديث الصورة!", ephemeral=True)
+
+@bot.tree.command(name="boost_test", description="إرسال رسالة بوست تجريبية")
+async def boost_test_cmd(interaction: discord.Interaction):
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ هذا الأمر للمسؤولين فقط!", ephemeral=True)
+        return
+    bconf = boost_config.get(interaction.guild_id, {})
+    color = int(bconf.get("color", "FF73FA").replace("#", ""), 16)
+    custom_msg = bconf.get("message")
+    if custom_msg:
+        text = custom_msg.replace("{user}", interaction.user.mention).replace("{tier}", str(interaction.guild.premium_tier)).replace("{count}", str(interaction.guild.premium_subscription_count)).replace("{progress}", calculate_boost_progress(interaction.guild))
+    else:
+        text = (
+            f"**{interaction.user.mention} قام بدعم السيرفر!**\n\n"
+            f"🚀 المستوى: {interaction.guild.premium_tier}\n"
+            f"👥 عدد البوسترز: {interaction.guild.premium_subscription_count}\n"
+            f"📈 التقدم: {calculate_boost_progress(interaction.guild)}\n\n"
+            f"💎 شكرًا لك يا {interaction.user.name}!"
+        )
+    embed = discord.Embed(title="💎 ¡ BOOST ¡ 💎 (تجريبي)", description=text, color=color, timestamp=discord.utils.utcnow())
+    if bconf.get("image"):
+        embed.set_thumbnail(url=bconf["image"])
+    embed.set_footer(text=f"🌐 {interaction.guild.name}")
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+# ════════════════════════════════════════
 # أمر اللوق (إنشاء رومات اللوق تلقائياً)
 # ════════════════════════════════════════
 
@@ -4166,6 +4357,7 @@ LOG_CHANNEL_NAMES = {
     "log_nickname":    "💻 LOG ∙ NICKNAME",
     "log_all":         "💻 LOG ∙ ALL",
     "log_hacker":      "💻 LOG ∙ H.A.C.K.E.R 🔍",
+    "log_boost":       "💎 LOG ∙ BOOST",
 }
 
 LOG_CHANNEL_TOPICS = {
@@ -4180,6 +4372,7 @@ LOG_CHANNEL_TOPICS = {
     "log_nickname":    "تغيير الأسماء",
     "log_all":         "الصوت، الدعوات، الإيموجي، الويب هوك، التكاملات",
     "log_hacker":      "صيد الهكرز، بصمات، حظر العتاد",
+    "log_boost":       "سجل البوستات والدعم",
 }
 
 LOG_CHANNEL_MAP = {
@@ -4210,6 +4403,7 @@ LOG_CHANNEL_MAP = {
     "log_scheduled_event": "log_all",
     "log_activity":        "log_all",
     "log_hacking":         "log_hacker",
+    "log_boost":           "log_boost",
 }
 
 WEBHOOK_LOG_CHANNELS = {
@@ -4436,7 +4630,7 @@ async def log_room(ctx, log_type: str, channel: discord.TextChannel = None):
         "log_all", "log_leave", "log_voice", "log_join", "log_invite", "log_emoji_sticker",
         "log_thread", "log_webhook", "log_integration", "log_stage", "log_automod",
         "log_channel_perm", "log_pin_bulk", "log_scheduled_event", "log_misc", "log_activity",
-        "log_new_message", "main", "log_hacker"
+        "log_new_message", "main", "log_hacker", "log_boost"
     ]
     if log_type not in valid_types:
         await ctx.send(f"❌ نوع غير صالح. الأنواع المتاحة:\n" + " ".join(f"`{t}`" for t in valid_types))
@@ -4774,7 +4968,7 @@ LOG_TEST_KEYS = {
     "channels": "log_channels", "admin_leave": "log_admin_leave",
     "edit_role": "log_edit_role", "admins_role": "log_admins_role",
     "role": "log_role", "messages": "log_messages", "nickname": "log_nickname",
-    "log_all": "log_all",
+    "log_all": "log_all", "boost": "log_boost",
 }
 
 @bot.command(name="test_log", aliases=["اختبار_لوق"])
@@ -7242,6 +7436,17 @@ async def on_member_join(member):
                 print(f"[BAIT] Assigned H.A.C.K.E.R role to {member} (returning bait user)", flush=True)
             except Exception as e:
                 print(f"[BAIT ROLE ERROR] {e}", flush=True)
+
+    # ── فحص البوست عند الدخول ──
+    bconf = boost_config.get(guild_id, {})
+    if member.premium_since is None and bconf.get("role_id"):
+        role = member.guild.get_role(bconf["role_id"])
+        if role and role in member.roles:
+            try:
+                await member.remove_roles(role, reason="Boost ended while offline")
+                print(f"[BOOST] Removed boost role from {member} (no longer boosting)", flush=True)
+            except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+                pass
 
     # Anti protection
     if is_exempt(member):
