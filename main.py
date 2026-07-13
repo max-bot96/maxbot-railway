@@ -4188,7 +4188,7 @@ async def update_bot_prefix(ctx):
             cwd=r"C:\Users\USER\Desktop\z1-pro",
             **_creation_flags
         )
-    await bot.close()
+    os._exit(0)
 
 @bot.tree.command(name="welcome", description="إعداد الترحيب (القناة + الرسالة + الصورة)")
 @discord.app_commands.describe(channel="قناة الترحيب", message="رسالة الترحيب (استخدم {member})", image="رابط صورة (اختياري)")
@@ -4232,7 +4232,7 @@ async def update_bot(interaction: discord.Interaction):
             cwd=r"C:\Users\USER\Desktop\z1-pro",
             **_creation_flags2
         )
-    await bot.close()
+    os._exit(0)
 
 # ════════════════════════════════════════
 # نظام البوستات (Boost System)
