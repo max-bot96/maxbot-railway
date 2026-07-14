@@ -2533,16 +2533,23 @@ async def on_member_update(before, after):
                 text=f"═══════════════════════════════\n🌐 {after.guild.name} • {now.strftime('%Y-%m-%d %H:%M')}\n═══════════════════════════════",
                 icon_url=after.guild.icon.url if after.guild.icon else None
             )
+            log_config = log_channels.get(after.guild.id, {})
+            log_ch_id = log_config.get("log_boost") or log_config.get("log_all") or log_config.get("main")
             log_channel = None
-            for ch in after.guild.text_channels:
-                if "boost" in ch.name.lower():
-                    log_channel = ch
-                    break
+            if log_ch_id:
+                log_channel = bot.get_channel(int(log_ch_id))
+            if not log_channel and log_ch_id:
+                log_channel = after.guild.get_channel(int(log_ch_id))
+            if not log_channel and log_ch_id:
+                try:
+                    log_channel = await bot.fetch_channel(int(log_ch_id))
+                except:
+                    pass
             if not log_channel:
-                log_config = log_channels.get(after.guild.id, {})
-                log_ch_id = log_config.get("log_boost") or log_config.get("log_all") or log_config.get("main")
-                if log_ch_id:
-                    log_channel = after.guild.get_channel(int(log_ch_id))
+                for ch in after.guild.text_channels:
+                    if "boost" in ch.name.lower():
+                        log_channel = ch
+                        break
             if log_channel:
                 try:
                     await log_channel.send(embed=log_embed)
@@ -4534,27 +4541,39 @@ async def boost_test_cmd(interaction: discord.Interaction):
         return em
 
     try:
+        log_config = log_channels.get(interaction.guild_id, {})
+        log_ch_id = log_config.get("log_boost") or log_config.get("log_all") or log_config.get("main")
         log_channel = None
-        for ch in interaction.guild.text_channels:
-            if "boost" in ch.name.lower():
-                log_channel = ch
-                break
+        if log_ch_id:
+            log_channel = bot.get_channel(int(log_ch_id))
         if not log_channel:
-            log_config = log_channels.get(interaction.guild_id, {})
-            log_ch_id = log_config.get("log_boost") or log_config.get("log_all") or log_config.get("main")
-            if log_ch_id:
-                log_channel = interaction.guild.get_channel(int(log_ch_id))
+            log_channel = interaction.guild.get_channel(int(log_ch_id)) if log_ch_id else None
+        if not log_channel:
+            try:
+                log_channel = await bot.fetch_channel(int(log_ch_id)) if log_ch_id else None
+            except:
+                pass
+        if not log_channel:
+            for ch in interaction.guild.text_channels:
+                if "boost" in ch.name.lower():
+                    log_channel = ch
+                    break
+        print(f"[BOOST TEST] Log channel: {log_channel} (id={log_ch_id})", flush=True)
         if log_channel:
             try:
                 bar2, progress_text2, _ = calculate_boost_progress(interaction.guild)
                 log_embed = _build_boost_log_embed(interaction.user, interaction.guild, bar2, progress_text2, "(تجريبي)")
                 await log_channel.send(embed=log_embed)
+                print(f"[BOOST TEST] ✅ Log sent to #{log_channel.name}", flush=True)
             except Exception as e:
-                print(f"[BOOST TEST LOG] Embed failed: {e}, sending simple message", flush=True)
-                await log_channel.send(f"💎 **Boost Test** — {interaction.user.mention} | Tier {interaction.guild.premium_tier} | {interaction.guild.premium_subscription_count} Boosters")
-            print(f"[BOOST TEST] ✅ Log sent to #{log_channel.name}", flush=True)
+                print(f"[BOOST TEST LOG] Embed failed: {e}, sending simple", flush=True)
+                try:
+                    await log_channel.send(f"💎 **Boost Test** — {interaction.user.mention} | Tier {interaction.guild.premium_tier} | {interaction.guild.premium_subscription_count} Boosters")
+                    print(f"[BOOST TEST] ✅ Simple log sent", flush=True)
+                except Exception as e2:
+                    print(f"[BOOST TEST] ❌ Even simple send failed: {e2}", flush=True)
         else:
-            print(f"[BOOST TEST] ❌ No boost log channel found in {interaction.guild.name}", flush=True)
+            print(f"[BOOST TEST] ❌ No log channel found. Config keys: {list(log_config.keys())}", flush=True)
     except Exception as e:
         print(f"[BOOST TEST LOG] Error: {e}", flush=True)
 
