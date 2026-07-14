@@ -4420,14 +4420,72 @@ async def boost_test_cmd(interaction: discord.Interaction):
     elif interaction.guild.icon:
         embed.set_image(url=interaction.guild.icon.url)
     embed.set_footer(text=f"🌐 {interaction.guild.name}")
+
+    test_role = None
+    if bconf.get("role_id"):
+        test_role = interaction.guild.get_role(bconf["role_id"])
+    if not test_role:
+        for r in interaction.guild.roles:
+            if "boost" in r.name.lower() or "بوست" in r.name.lower():
+                test_role = r
+                break
+    role_text2 = ""
+    if test_role:
+        role_text2 = f"\n🎭 **الرتبة الممنوحة:** {test_role.mention}"
+        try:
+            await interaction.user.add_roles(test_role, reason="Boost Test")
+        except:
+            pass
+    if role_text2 and "الرتبة الممنوحة" not in embed.description:
+        embed.description += role_text2
+
     bconf2 = boost_config.get(interaction.guild_id, {})
+    boost_ch = None
     if bconf2.get("channel_id"):
-        ch = interaction.guild.get_channel(bconf2["channel_id"])
-        if ch:
-            await ch.send(embed=embed)
-            await interaction.response.send_message(f"✅ تم إرسال الرسالة في {ch.mention}", ephemeral=True)
-            return
-    await interaction.response.send_message(embed=embed)
+        boost_ch = interaction.guild.get_channel(bconf2["channel_id"])
+    if not boost_ch:
+        boost_ch = discord.utils.get(interaction.guild.text_channels, name="general") or discord.utils.get(interaction.guild.text_channels, lambda c: "boost" in c.name.lower()) or interaction.guild.system_channel
+    if boost_ch:
+        try:
+            await boost_ch.send(embed=embed)
+            await interaction.response.send_message(f"✅ تم إرسال الرسالة في {boost_ch.mention}", ephemeral=True)
+        except:
+            await interaction.response.send_message(embed=embed)
+    else:
+        await interaction.response.send_message(embed=embed)
+
+    try:
+        test_log_embed = discord.Embed(
+            title="💎 بوست جديد! (تجريبي)",
+            description=(
+                f"▸ **العضو:** {interaction.user.mention}\n"
+                f"▸ **المستوى:** Tier {interaction.guild.premium_tier}\n"
+                f"▸ **العدد:** {interaction.guild.premium_subscription_count}"
+            ),
+            color=0xBB6BD9,
+            timestamp=discord.utils.utcnow()
+        )
+        test_log_embed.set_thumbnail(url=interaction.user.display_avatar.url)
+        await send_log(interaction.guild_id, "log_boost", test_log_embed)
+    except:
+        pass
+    try:
+        test_log_ch = discord.utils.get(interaction.guild.channels, name="💎 LOG ∙ BOOST") or discord.utils.get(interaction.guild.channels, lambda c: "boost" in c.name.lower() and "log" in c.name.lower())
+        if test_log_ch:
+            test_log_embed2 = discord.Embed(
+                title="💎 بوست جديد! (تجريبي)",
+                description=(
+                    f"▸ **العضو:** {interaction.user.mention}\n"
+                    f"▸ **المستوى:** Tier {interaction.guild.premium_tier}\n"
+                    f"▸ **العدد:** {interaction.guild.premium_subscription_count}"
+                ),
+                color=0xBB6BD9,
+                timestamp=discord.utils.utcnow()
+            )
+            test_log_embed2.set_thumbnail(url=interaction.user.display_avatar.url)
+            await test_log_ch.send(embed=test_log_embed2)
+    except:
+        pass
 
 # ════════════════════════════════════════
 # أمر اللوق (إنشاء رومات اللوق تلقائياً)
