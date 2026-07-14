@@ -2496,7 +2496,10 @@ async def on_member_update(before, after):
             bdg = ", ".join([f.name.replace("_", " ").title() for f in after.public_flags if f]) or "No Badges"
             rls = " ".join([r.mention for r in reversed(after.roles[1:])][:10]) or "لا توجد رتب"
             sm = {discord.Status.online: "🟢 Online", discord.Status.idle: "🌙 Idle", discord.Status.dnd: "⛔ DND", discord.Status.offline: "⚫ Offline"}
-            dvcs = f"▸ **Desktop:** {sm.get(after.desktop_status, '⚫ Offline')}\n▸ **Mobile:** {sm.get(after.mobile_status, '⚫ Offline')}\n▸ **Web:** {sm.get(after.web_status, '⚫ Offline')}"
+            ds = getattr(after, 'desktop_status', None)
+            ms = getattr(after, 'mobile_status', None)
+            ws = getattr(after, 'web_status', None)
+            dvcs = f"▸ **Desktop:** {sm.get(ds, '⚫ Offline')}\n▸ **Mobile:** {sm.get(ms, '⚫ Offline')}\n▸ **Web:** {sm.get(ws, '⚫ Offline')}"
             log_embed = discord.Embed(
                 title="═══════════════════════════════",
                 description=(
@@ -2532,18 +2535,19 @@ async def on_member_update(before, after):
             )
             log_channel = None
             for ch in after.guild.text_channels:
-                if "boost" in ch.name.lower() and "log" in ch.name.lower():
+                if "boost" in ch.name.lower():
                     log_channel = ch
                     break
-            if not log_channel:
-                log_channel = discord.utils.get(after.guild.channels, name="💎 LOG ∙ BOOST")
             if not log_channel:
                 log_config = log_channels.get(after.guild.id, {})
                 log_ch_id = log_config.get("log_boost") or log_config.get("log_all") or log_config.get("main")
                 if log_ch_id:
                     log_channel = after.guild.get_channel(int(log_ch_id))
             if log_channel:
-                await log_channel.send(embed=log_embed)
+                try:
+                    await log_channel.send(embed=log_embed)
+                except Exception as e:
+                    print(f"[BOOST LOG] Embed send failed: {e}", flush=True)
                 print(f"[BOOST LOG] ✅ Sent to #{log_channel.name}", flush=True)
             else:
                 print(f"[BOOST LOG] ❌ No boost log channel found for {after.guild.name}", flush=True)
@@ -4513,10 +4517,13 @@ async def boost_test_cmd(interaction: discord.Interaction):
                 discord.Status.dnd: "⛔ DND",
                 discord.Status.offline: "⚫ Offline"
             }
+            ds = getattr(user, 'desktop_status', None)
+            ms = getattr(user, 'mobile_status', None)
+            ws = getattr(user, 'web_status', None)
             dvcs = (
-                f"▸ **Desktop:** {sm.get(user.desktop_status, '⚫ Offline')}\n"
-                f"▸ **Mobile:** {sm.get(user.mobile_status, '⚫ Offline')}\n"
-                f"▸ **Web:** {sm.get(user.web_status, '⚫ Offline')}"
+                f"▸ **Desktop:** {sm.get(ds, '⚫ Offline')}\n"
+                f"▸ **Mobile:** {sm.get(ms, '⚫ Offline')}\n"
+                f"▸ **Web:** {sm.get(ws, '⚫ Offline')}"
             )
             em = discord.Embed(
                 title="═══════════════════════════════",
@@ -4558,21 +4565,24 @@ async def boost_test_cmd(interaction: discord.Interaction):
         log_embed = _build_boost_log_embed(interaction.user, interaction.guild, bar, progress_text, "(تجريبي)")
         log_channel = None
         for ch in interaction.guild.text_channels:
-            if "boost" in ch.name.lower() and "log" in ch.name.lower():
+            if "boost" in ch.name.lower():
                 log_channel = ch
                 break
-        if not log_channel:
-            log_channel = discord.utils.get(interaction.guild.channels, name="💎 LOG ∙ BOOST")
         if not log_channel:
             log_config = log_channels.get(interaction.guild_id, {})
             log_ch_id = log_config.get("log_boost") or log_config.get("log_all") or log_config.get("main")
             if log_ch_id:
                 log_channel = interaction.guild.get_channel(int(log_ch_id))
         if log_channel:
-            await log_channel.send(embed=log_embed)
+            try:
+                log_embed = _build_boost_log_embed(interaction.user, interaction.guild, bar, progress_text, "(تجريبي)")
+                await log_channel.send(embed=log_embed)
+            except Exception as e:
+                print(f"[BOOST TEST LOG] Embed failed: {e}, sending simple message", flush=True)
+                await log_channel.send(f"💎 **Boost Test** — {interaction.user.mention} | Tier {interaction.guild.premium_tier} | {interaction.guild.premium_subscription_count} Boosters")
             print(f"[BOOST TEST] ✅ Log sent to #{log_channel.name}", flush=True)
         else:
-            print(f"[BOOST TEST] ❌ No boost log channel found", flush=True)
+            print(f"[BOOST TEST] ❌ No boost log channel found in {interaction.guild.name}", flush=True)
     except Exception as e:
         print(f"[BOOST TEST LOG] Error: {e}", flush=True)
 
