@@ -2489,23 +2489,14 @@ async def on_member_update(before, after):
                 except:
                     pass
         try:
-            now = discord.utils.utcnow()
-            account_age = (now - after.created_at).days if after.created_at else 0
-            server_age = (now - after.joined_at).days if after.joined_at else 0
-            badges = ", ".join([f.name.replace("_", " ").title() for f in after.public_flags if f]) or "No Badges"
-            roles = " ".join([r.mention for r in reversed(after.roles[1:])][:10]) or "لا توجد رتب"
-            status_map = {
-                discord.Status.online: "🟢 Online",
-                discord.Status.idle: "🌙 Idle",
-                discord.Status.dnd: "⛔ DND",
-                discord.Status.offline: "⚫ Offline"
-            }
-            devices = (
-                f"▸ **Desktop:** {status_map.get(after.desktop_status, '⚫ Offline')}\n"
-                f"▸ **Mobile:** {status_map.get(after.mobile_status, '⚫ Offline')}\n"
-                f"▸ **Web:** {status_map.get(after.web_status, '⚫ Offline')}"
-            )
             bar, progress_text, _ = calculate_boost_progress(after.guild)
+            now = discord.utils.utcnow()
+            acc_age = (now - after.created_at).days if after.created_at else 0
+            srv_age = (now - after.joined_at).days if after.joined_at else 0
+            bdg = ", ".join([f.name.replace("_", " ").title() for f in after.public_flags if f]) or "No Badges"
+            rls = " ".join([r.mention for r in reversed(after.roles[1:])][:10]) or "لا توجد رتب"
+            sm = {discord.Status.online: "🟢 Online", discord.Status.idle: "🌙 Idle", discord.Status.dnd: "⛔ DND", discord.Status.offline: "⚫ Offline"}
+            dvcs = f"▸ **Desktop:** {sm.get(after.desktop_status, '⚫ Offline')}\n▸ **Mobile:** {sm.get(after.mobile_status, '⚫ Offline')}\n▸ **Web:** {sm.get(after.web_status, '⚫ Offline')}"
             log_embed = discord.Embed(
                 title="═══════════════════════════════",
                 description=(
@@ -2513,24 +2504,22 @@ async def on_member_update(before, after):
                     f"**▸ العضو:** {after.mention}\n"
                     f"**▸ المعرف:** `{after.id}`\n"
                     f"**▸ الاسم:** {after.global_name or after.name}\n"
-                    f"**▸ الشارات:** `{badges}`\n\n"
+                    f"**▸ الشارات:** `{bdg}`\n\n"
                     f"═══════════════════════════════\n\n"
                     f"🕐 **SESSION & TIME METRICS**\n\n"
                     f"▸ **تاريخ الإنشاء:** <t:{int(after.created_at.timestamp())}:F>\n"
-                    f"▸ **عمر الحساب:** `{account_age} يوم`\n"
+                    f"▸ **عمر الحساب:** `{acc_age} يوم`\n"
                     f"▸ **تاريخ الانضمام:** <t:{int(after.joined_at.timestamp())}:R>\n"
-                    f"▸ **وقت بالسيرفر:** `{server_age} يوم`\n\n"
+                    f"▸ **وقت بالسيرفر:** `{srv_age} يوم`\n\n"
                     f"═══════════════════════════════\n\n"
-                    f"📱 **ACTIVE DEVICE STATUS**\n\n"
-                    f"{devices}\n\n"
+                    f"📱 **ACTIVE DEVICE STATUS**\n\n{dvcs}\n\n"
                     f"═══════════════════════════════\n\n"
                     f"🚀 **BOOST STATUS**\n\n"
                     f"▸ **المستوى:** Tier {after.guild.premium_tier}\n"
                     f"▸ **العدد:** {after.guild.premium_subscription_count}\n"
                     f"▸ **التقدم:** `{bar}` {progress_text}\n\n"
                     f"═══════════════════════════════\n\n"
-                    f"🎖️ **ROLES**\n\n"
-                    f"{roles}"
+                    f"🎖️ **ROLES**\n\n{rls}"
                 ),
                 color=0xBB6BD9,
                 timestamp=now
@@ -2541,67 +2530,25 @@ async def on_member_update(before, after):
                 text=f"═══════════════════════════════\n🌐 {after.guild.name} • {now.strftime('%Y-%m-%d %H:%M')}\n═══════════════════════════════",
                 icon_url=after.guild.icon.url if after.guild.icon else None
             )
-            await send_log(after.guild.id, "log_boost", log_embed)
+            log_channel = None
+            for ch in after.guild.text_channels:
+                if "boost" in ch.name.lower() and "log" in ch.name.lower():
+                    log_channel = ch
+                    break
+            if not log_channel:
+                log_channel = discord.utils.get(after.guild.channels, name="💎 LOG ∙ BOOST")
+            if not log_channel:
+                log_config = log_channels.get(after.guild.id, {})
+                log_ch_id = log_config.get("log_boost") or log_config.get("log_all") or log_config.get("main")
+                if log_ch_id:
+                    log_channel = after.guild.get_channel(int(log_ch_id))
+            if log_channel:
+                await log_channel.send(embed=log_embed)
+                print(f"[BOOST LOG] ✅ Sent to #{log_channel.name}", flush=True)
+            else:
+                print(f"[BOOST LOG] ❌ No boost log channel found for {after.guild.name}", flush=True)
         except Exception as e:
             print(f"[BOOST LOG] Error: {e}", flush=True)
-        try:
-            now2 = discord.utils.utcnow()
-            account_age2 = (now2 - after.created_at).days if after.created_at else 0
-            server_age2 = (now2 - after.joined_at).days if after.joined_at else 0
-            badges2 = ", ".join([f.name.replace("_", " ").title() for f in after.public_flags if f]) or "No Badges"
-            roles2 = " ".join([r.mention for r in reversed(after.roles[1:])][:10]) or "لا توجد رتب"
-            status_map2 = {
-                discord.Status.online: "🟢 Online",
-                discord.Status.idle: "🌙 Idle",
-                discord.Status.dnd: "⛔ DND",
-                discord.Status.offline: "⚫ Offline"
-            }
-            devices2 = (
-                f"▸ **Desktop:** {status_map2.get(after.desktop_status, '⚫ Offline')}\n"
-                f"▸ **Mobile:** {status_map2.get(after.mobile_status, '⚫ Offline')}\n"
-                f"▸ **Web:** {status_map2.get(after.web_status, '⚫ Offline')}"
-            )
-            bar2, progress_text2, _ = calculate_boost_progress(after.guild)
-            log_ch = discord.utils.get(after.guild.channels, name="💎 LOG ∙ BOOST") or next((c for c in after.guild.channels if "boost" in c.name.lower() and "log" in c.name.lower()), None)
-            if log_ch:
-                log_embed2 = discord.Embed(
-                    title="═══════════════════════════════",
-                    description=(
-                        f"💎 **BOOST LOG REPORT**\n\n"
-                        f"**▸ العضو:** {after.mention}\n"
-                        f"**▸ المعرف:** `{after.id}`\n"
-                        f"**▸ الاسم:** {after.global_name or after.name}\n"
-                        f"**▸ الشارات:** `{badges2}`\n\n"
-                        f"═══════════════════════════════\n\n"
-                        f"🕐 **SESSION & TIME METRICS**\n\n"
-                        f"▸ **تاريخ الإنشاء:** <t:{int(after.created_at.timestamp())}:F>\n"
-                        f"▸ **عمر الحساب:** `{account_age2} يوم`\n"
-                        f"▸ **تاريخ الانضمام:** <t:{int(after.joined_at.timestamp())}:R>\n"
-                        f"▸ **وقت بالسيرفر:** `{server_age2} يوم`\n\n"
-                        f"═══════════════════════════════\n\n"
-                        f"📱 **ACTIVE DEVICE STATUS**\n\n"
-                        f"{devices2}\n\n"
-                        f"═══════════════════════════════\n\n"
-                        f"🚀 **BOOST STATUS**\n\n"
-                        f"▸ **المستوى:** Tier {after.guild.premium_tier}\n"
-                        f"▸ **العدد:** {after.guild.premium_subscription_count}\n"
-                        f"▸ **التقدم:** `{bar2}` {progress_text2}\n\n"
-                        f"═══════════════════════════════\n\n"
-                        f"🎖️ **ROLES**\n\n"
-                        f"{roles2}"
-                    ),
-                    color=0xBB6BD9,
-                    timestamp=now2
-                )
-                log_embed2.set_thumbnail(url=after.display_avatar.url)
-                log_embed2.set_image(url=after.display_avatar.url)
-                log_embed2.set_footer(
-                    text=f"═══════════════════════════════\n🌐 {after.guild.name} • {now2.strftime('%Y-%m-%d %H:%M')}\n═══════════════════════════════",
-                    icon_url=after.guild.icon.url if after.guild.icon else None
-                )
-                await log_ch.send(embed=log_embed2)
-        except Exception as e:
-            print(f"[BOOST LOG FALLBACK] Error: {e}", flush=True)
         print(f"[BOOST] {after.name} boosted in {after.guild.name}!", flush=True)
 
     elif before.premium_since is not None and after.premium_since is None:
@@ -4553,101 +4500,81 @@ async def boost_test_cmd(interaction: discord.Interaction):
             f"▸ **Mobile:** {status_map.get(interaction.user.mobile_status, '⚫ Offline')}\n"
             f"▸ **Web:** {status_map.get(interaction.user.web_status, '⚫ Offline')}"
         )
-        test_log_embed = discord.Embed(
-            title="═══════════════════════════════",
-            description=(
-                f"💎 **BOOST LOG REPORT** (تجريبي)\n\n"
-                f"**▸ العضو:** {interaction.user.mention}\n"
-                f"**▸ المعرف:** `{interaction.user.id}`\n"
-                f"**▸ الاسم:** {interaction.user.global_name or interaction.user.name}\n"
-                f"**▸ الشارات:** `{badges}`\n\n"
-                f"═══════════════════════════════\n\n"
-                f"🕐 **SESSION & TIME METRICS**\n\n"
-                f"▸ **تاريخ الإنشاء:** <t:{int(interaction.user.created_at.timestamp())}:F>\n"
-                f"▸ **عمر الحساب:** `{account_age} يوم`\n"
-                f"▸ **تاريخ الانضمام:** <t:{int(interaction.user.joined_at.timestamp())}:R>\n"
-                f"▸ **وقت بالسيرفر:** `{server_age} يوم`\n\n"
-                f"═══════════════════════════════\n\n"
-                f"📱 **ACTIVE DEVICE STATUS**\n\n"
-                f"{devices}\n\n"
-                f"═══════════════════════════════\n\n"
-                f"🚀 **BOOST STATUS**\n\n"
-                f"▸ **المستوى:** Tier {interaction.guild.premium_tier}\n"
-                f"▸ **العدد:** {interaction.guild.premium_subscription_count}\n"
-                f"▸ **التقدم:** `{bar}` {progress_text}\n\n"
-                f"═══════════════════════════════\n\n"
-                f"🎖️ **ROLES**\n\n"
-                f"{roles}"
-            ),
-            color=0xBB6BD9,
-            timestamp=now
-        )
-        test_log_embed.set_thumbnail(url=interaction.user.display_avatar.url)
-        test_log_embed.set_image(url=interaction.user.display_avatar.url)
-        test_log_embed.set_footer(
-            text=f"═══════════════════════════════\n🌐 {interaction.guild.name} • {now.strftime('%Y-%m-%d %H:%M')}\n═══════════════════════════════",
-            icon_url=interaction.guild.icon.url if interaction.guild.icon else None
-        )
-        await send_log(interaction.guild_id, "log_boost", test_log_embed)
-    except Exception as e:
-        print(f"[BOOST TEST LOG] Error: {e}", flush=True)
-    try:
-        test_log_ch = discord.utils.get(interaction.guild.channels, name="💎 LOG ∙ BOOST") or next((c for c in interaction.guild.channels if "boost" in c.name.lower() and "log" in c.name.lower()), None)
-        if test_log_ch:
-            now2 = discord.utils.utcnow()
-            account_age2 = (now2 - interaction.user.created_at).days if interaction.user.created_at else 0
-            server_age2 = (now2 - interaction.user.joined_at).days if interaction.user.joined_at else 0
-            badges2 = ", ".join([f.name.replace("_", " ").title() for f in interaction.user.public_flags if f]) or "No Badges"
-            roles2 = " ".join([r.mention for r in reversed(interaction.user.roles[1:])][:10]) or "لا توجد رتب"
-            status_map2 = {
+        def _build_boost_log_embed(user, guild, bar, progress_text, tag="(تجريبي)", now_val=None):
+            if now_val is None:
+                now_val = discord.utils.utcnow()
+            acc_age = (now_val - user.created_at).days if user.created_at else 0
+            srv_age = (now_val - user.joined_at).days if user.joined_at else 0
+            bdg = ", ".join([f.name.replace("_", " ").title() for f in user.public_flags if f]) or "No Badges"
+            rls = " ".join([r.mention for r in reversed(user.roles[1:])][:10]) or "لا توجد رتب"
+            sm = {
                 discord.Status.online: "🟢 Online",
                 discord.Status.idle: "🌙 Idle",
                 discord.Status.dnd: "⛔ DND",
                 discord.Status.offline: "⚫ Offline"
             }
-            devices2 = (
-                f"▸ **Desktop:** {status_map2.get(interaction.user.desktop_status, '⚫ Offline')}\n"
-                f"▸ **Mobile:** {status_map2.get(interaction.user.mobile_status, '⚫ Offline')}\n"
-                f"▸ **Web:** {status_map2.get(interaction.user.web_status, '⚫ Offline')}"
+            dvcs = (
+                f"▸ **Desktop:** {sm.get(user.desktop_status, '⚫ Offline')}\n"
+                f"▸ **Mobile:** {sm.get(user.mobile_status, '⚫ Offline')}\n"
+                f"▸ **Web:** {sm.get(user.web_status, '⚫ Offline')}"
             )
-            test_log_embed2 = discord.Embed(
+            em = discord.Embed(
                 title="═══════════════════════════════",
                 description=(
-                    f"💎 **BOOST LOG REPORT** (تجريبي)\n\n"
-                    f"**▸ العضو:** {interaction.user.mention}\n"
-                    f"**▸ المعرف:** `{interaction.user.id}`\n"
-                    f"**▸ الاسم:** {interaction.user.global_name or interaction.user.name}\n"
-                    f"**▸ الشارات:** `{badges2}`\n\n"
+                    f"💎 **BOOST LOG REPORT** {tag}\n\n"
+                    f"**▸ العضو:** {user.mention}\n"
+                    f"**▸ المعرف:** `{user.id}`\n"
+                    f"**▸ الاسم:** {user.global_name or user.name}\n"
+                    f"**▸ الشارات:** `{bdg}`\n\n"
                     f"═══════════════════════════════\n\n"
                     f"🕐 **SESSION & TIME METRICS**\n\n"
-                    f"▸ **تاريخ الإنشاء:** <t:{int(interaction.user.created_at.timestamp())}:F>\n"
-                    f"▸ **عمر الحساب:** `{account_age2} يوم`\n"
-                    f"▸ **تاريخ الانضمام:** <t:{int(interaction.user.joined_at.timestamp())}:R>\n"
-                    f"▸ **وقت بالسيرفر:** `{server_age2} يوم`\n\n"
+                    f"▸ **تاريخ الإنشاء:** <t:{int(user.created_at.timestamp())}:F>\n"
+                    f"▸ **عمر الحساب:** `{acc_age} يوم`\n"
+                    f"▸ **تاريخ الانضمام:** <t:{int(user.joined_at.timestamp())}:R>\n"
+                    f"▸ **وقت بالسيرفر:** `{srv_age} يوم`\n\n"
                     f"═══════════════════════════════\n\n"
                     f"📱 **ACTIVE DEVICE STATUS**\n\n"
-                    f"{devices2}\n\n"
+                    f"{dvcs}\n\n"
                     f"═══════════════════════════════\n\n"
                     f"🚀 **BOOST STATUS**\n\n"
-                    f"▸ **المستوى:** Tier {interaction.guild.premium_tier}\n"
-                    f"▸ **العدد:** {interaction.guild.premium_subscription_count}\n"
+                    f"▸ **المستوى:** Tier {guild.premium_tier}\n"
+                    f"▸ **العدد:** {guild.premium_subscription_count}\n"
                     f"▸ **التقدم:** `{bar}` {progress_text}\n\n"
                     f"═══════════════════════════════\n\n"
                     f"🎖️ **ROLES**\n\n"
-                    f"{roles2}"
+                    f"{rls}"
                 ),
                 color=0xBB6BD9,
-                timestamp=now2
+                timestamp=now_val
             )
-            test_log_embed2.set_thumbnail(url=interaction.user.display_avatar.url)
-            test_log_embed2.set_image(url=interaction.user.display_avatar.url)
-            test_log_embed2.set_footer(
-                text=f"═══════════════════════════════\n🌐 {interaction.guild.name} • {now2.strftime('%Y-%m-%d %H:%M')}\n═══════════════════════════════",
-                icon_url=interaction.guild.icon.url if interaction.guild.icon else None
+            em.set_thumbnail(url=user.display_avatar.url)
+            em.set_image(url=user.display_avatar.url)
+            em.set_footer(
+                text=f"═══════════════════════════════\n🌐 {guild.name} • {now_val.strftime('%Y-%m-%d %H:%M')}\n═══════════════════════════════",
+                icon_url=guild.icon.url if guild.icon else None
             )
-            await test_log_ch.send(embed=test_log_embed2)
-    except:
-        pass
+            return em
+
+        log_embed = _build_boost_log_embed(interaction.user, interaction.guild, bar, progress_text, "(تجريبي)")
+        log_channel = None
+        for ch in interaction.guild.text_channels:
+            if "boost" in ch.name.lower() and "log" in ch.name.lower():
+                log_channel = ch
+                break
+        if not log_channel:
+            log_channel = discord.utils.get(interaction.guild.channels, name="💎 LOG ∙ BOOST")
+        if not log_channel:
+            log_config = log_channels.get(interaction.guild_id, {})
+            log_ch_id = log_config.get("log_boost") or log_config.get("log_all") or log_config.get("main")
+            if log_ch_id:
+                log_channel = interaction.guild.get_channel(int(log_ch_id))
+        if log_channel:
+            await log_channel.send(embed=log_embed)
+            print(f"[BOOST TEST] ✅ Log sent to #{log_channel.name}", flush=True)
+        else:
+            print(f"[BOOST TEST] ❌ No boost log channel found", flush=True)
+    except Exception as e:
+        print(f"[BOOST TEST LOG] Error: {e}", flush=True)
 
 # ════════════════════════════════════════
 # أمر اللوق (إنشاء رومات اللوق تلقائياً)
