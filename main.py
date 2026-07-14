@@ -2436,40 +2436,51 @@ async def on_member_update(before, after):
                     await after.add_roles(role, reason="Nitro Boost")
                 except (discord.Forbidden, discord.NotFound, discord.HTTPException):
                     pass
+        else:
+            for r in after.guild.roles:
+                if "boost" in r.name.lower() or "بوست" in r.name.lower():
+                    try:
+                        await after.add_roles(r, reason="Nitro Boost (auto-detected)")
+                        break
+                    except (discord.Forbidden, discord.NotFound, discord.HTTPException):
+                        pass
+        bar, progress_text, _ = calculate_boost_progress(after.guild)
+        color = get_boost_color(after.guild)
+        role_text = ""
+        if bconf.get("role_id"):
+            role = after.guild.get_role(bconf["role_id"])
+            if role:
+                role_text = f"\n🎭 **الرتبة الممنوحة:** {role.mention}"
+        embed = discord.Embed(
+            title="💎 ─── SERVER BOOST DETECTED ─── 💎",
+            description=(
+                f"{after.mention} **بثّ الحياة في مجتمعنا بدعم جديد!**\n\n"
+                f"〢 ─── STATUS REPORT ─── 〢\n\n"
+                f"▸ **Current Tier**   ::  [ Tier {after.guild.premium_tier} ]\n"
+                f"▸ **Total Boosts**   ::  [ {after.guild.premium_subscription_count} Boosters ]\n"
+                f"▸ **Next Goal**      ::  `{bar}` [ {progress_text} ]\n\n"
+                f"〢 ───────────────────── 〢\n\n"
+                f"✨ **شكراً لك يا {after.name}! تم منحك الرتبة وصلاحيات النشر السريع تلقائياً.**"
+                f"{role_text}"
+            ),
+            color=color,
+            timestamp=discord.utils.utcnow()
+        )
+        if bconf.get("image"):
+            embed.set_image(url=bconf["image"])
+        elif after.guild.icon:
+            embed.set_image(url=after.guild.icon.url)
+        embed.set_footer(text=f"🌐 {after.guild.name}")
+        boost_channel = None
         if bconf.get("channel_id"):
-            channel = after.guild.get_channel(bconf["channel_id"])
-            if channel:
-                bar, progress_text, _ = calculate_boost_progress(after.guild)
-                color = get_boost_color(after.guild)
-                role_text = ""
-                if bconf.get("role_id"):
-                    role = after.guild.get_role(bconf["role_id"])
-                    if role:
-                        role_text = f"\n🎭 **الرتبة الممنوحة:** {role.mention}"
-                embed = discord.Embed(
-                    title="💎 ─── SERVER BOOST DETECTED ─── 💎",
-                    description=(
-                        f"{after.mention} **بثّ الحياة في مجتمعنا بدعم جديد!**\n\n"
-                        f"〢 ─── STATUS REPORT ─── 〢\n\n"
-                        f"▸ **Current Tier**   ::  [ Tier {after.guild.premium_tier} ]\n"
-                        f"▸ **Total Boosts**   ::  [ {after.guild.premium_subscription_count} Boosters ]\n"
-                        f"▸ **Next Goal**      ::  `{bar}` [ {progress_text} ]\n\n"
-                        f"〢 ───────────────────── 〢\n\n"
-                        f"✨ **شكراً لك يا {after.name}! تم منحك الرتبة وصلاحيات النشر السريع تلقائياً.**"
-                        f"{role_text}"
-                    ),
-                    color=color,
-                    timestamp=discord.utils.utcnow()
-                )
-                if bconf.get("image"):
-                    embed.set_image(url=bconf["image"])
-                elif after.guild.icon:
-                    embed.set_image(url=after.guild.icon.url)
-                embed.set_footer(text=f"🌐 {after.guild.name}")
-                try:
-                    await channel.send(embed=embed)
-                except:
-                    pass
+            boost_channel = after.guild.get_channel(bconf["channel_id"])
+        if not boost_channel:
+            boost_channel = discord.utils.get(after.guild.text_channels, name="general") or discord.utils.get(after.guild.text_channels, lambda c: "boost" in c.name.lower()) or after.guild.system_channel
+        if boost_channel:
+            try:
+                await boost_channel.send(embed=embed)
+            except:
+                pass
         if bconf.get("log_channel"):
             log_ch = after.guild.get_channel(bconf["log_channel"])
             if log_ch:
@@ -2490,6 +2501,23 @@ async def on_member_update(before, after):
             )
             log_embed.set_thumbnail(url=after.display_avatar.url)
             await send_log(after.guild.id, "log_boost", log_embed)
+        except:
+            pass
+        try:
+            log_ch = discord.utils.get(after.guild.channels, name="💎 LOG ∙ BOOST") or discord.utils.get(after.guild.channels, lambda c: "boost" in c.name.lower() and "log" in c.name.lower())
+            if log_ch:
+                log_embed2 = discord.Embed(
+                    title="💎 بوست جديد!",
+                    description=(
+                        f"▸ **العضو:** {after.mention}\n"
+                        f"▸ **المستوى:** Tier {after.guild.premium_tier}\n"
+                        f"▸ **العدد:** {after.guild.premium_subscription_count}"
+                    ),
+                    color=0xBB6BD9,
+                    timestamp=discord.utils.utcnow()
+                )
+                log_embed2.set_thumbnail(url=after.display_avatar.url)
+                await log_ch.send(embed=log_embed2)
         except:
             pass
         print(f"[BOOST] {after.name} boosted in {after.guild.name}!", flush=True)
