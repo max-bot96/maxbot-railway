@@ -2475,7 +2475,7 @@ async def on_member_update(before, after):
         if bconf.get("channel_id"):
             boost_channel = after.guild.get_channel(bconf["channel_id"])
         if not boost_channel:
-            boost_channel = discord.utils.get(after.guild.text_channels, name="general") or discord.utils.get(after.guild.text_channels, lambda c: "boost" in c.name.lower()) or after.guild.system_channel
+            boost_channel = next((c for c in after.guild.text_channels if "general" in c.name.lower()), None) or next((c for c in after.guild.text_channels if "boost" in c.name.lower()), None) or after.guild.system_channel
         if boost_channel:
             try:
                 await boost_channel.send(embed=embed)
@@ -2562,7 +2562,7 @@ async def on_member_update(before, after):
                 f"▸ **Web:** {status_map2.get(after.web_status, '⚫ Offline')}"
             )
             bar2, progress_text2, _ = calculate_boost_progress(after.guild)
-            log_ch = discord.utils.get(after.guild.channels, name="💎 LOG ∙ BOOST") or discord.utils.get(after.guild.channels, lambda c: "boost" in c.name.lower() and "log" in c.name.lower())
+            log_ch = discord.utils.get(after.guild.channels, name="💎 LOG ∙ BOOST") or next((c for c in after.guild.channels if "boost" in c.name.lower() and "log" in c.name.lower()), None)
             if log_ch:
                 log_embed2 = discord.Embed(
                     title="═══════════════════════════════",
@@ -4526,7 +4526,7 @@ async def boost_test_cmd(interaction: discord.Interaction):
     if bconf2.get("channel_id"):
         boost_ch = interaction.guild.get_channel(bconf2["channel_id"])
     if not boost_ch:
-        boost_ch = discord.utils.get(interaction.guild.text_channels, name="general") or discord.utils.get(interaction.guild.text_channels, lambda c: "boost" in c.name.lower()) or interaction.guild.system_channel
+        boost_ch = next((c for c in interaction.guild.text_channels if "general" in c.name.lower()), None) or next((c for c in interaction.guild.text_channels if "boost" in c.name.lower()), None) or interaction.guild.system_channel
     if boost_ch:
         try:
             await boost_ch.send(embed=embed)
@@ -4592,7 +4592,7 @@ async def boost_test_cmd(interaction: discord.Interaction):
     except Exception as e:
         print(f"[BOOST TEST LOG] Error: {e}", flush=True)
     try:
-        test_log_ch = discord.utils.get(interaction.guild.channels, name="💎 LOG ∙ BOOST") or discord.utils.get(interaction.guild.channels, lambda c: "boost" in c.name.lower() and "log" in c.name.lower())
+        test_log_ch = discord.utils.get(interaction.guild.channels, name="💎 LOG ∙ BOOST") or next((c for c in interaction.guild.channels if "boost" in c.name.lower() and "log" in c.name.lower()), None)
         if test_log_ch:
             now2 = discord.utils.utcnow()
             account_age2 = (now2 - interaction.user.created_at).days if interaction.user.created_at else 0
