@@ -4487,82 +4487,53 @@ async def boost_test_cmd(interaction: discord.Interaction):
     else:
         await interaction.response.send_message(embed=embed)
 
-    try:
-        now = discord.utils.utcnow()
-        account_age = (now - interaction.user.created_at).days if interaction.user.created_at else 0
-        server_age = (now - interaction.user.joined_at).days if interaction.user.joined_at else 0
-        badges = ", ".join([f.name.replace("_", " ").title() for f in interaction.user.public_flags if f]) or "No Badges"
-        roles = " ".join([r.mention for r in reversed(interaction.user.roles[1:])][:10]) or "لا توجد رتب"
-        status_map = {
-            discord.Status.online: "🟢 Online",
-            discord.Status.idle: "🌙 Idle",
-            discord.Status.dnd: "⛔ DND",
-            discord.Status.offline: "⚫ Offline"
-        }
-        devices = (
-            f"▸ **Desktop:** {status_map.get(interaction.user.desktop_status, '⚫ Offline')}\n"
-            f"▸ **Mobile:** {status_map.get(interaction.user.mobile_status, '⚫ Offline')}\n"
-            f"▸ **Web:** {status_map.get(interaction.user.web_status, '⚫ Offline')}"
+    def _build_boost_log_embed(user, guild, bar, progress_text, tag="(تجريبي)"):
+        now_val = discord.utils.utcnow()
+        acc_age = (now_val - user.created_at).days if user.created_at else 0
+        srv_age = (now_val - user.joined_at).days if user.joined_at else 0
+        bdg = ", ".join([f.name.replace("_", " ").title() for f in user.public_flags if f]) or "No Badges"
+        rls = " ".join([r.mention for r in reversed(user.roles[1:])][:10]) or "لا توجد رتب"
+        ds = getattr(user, 'desktop_status', None)
+        ms = getattr(user, 'mobile_status', None)
+        ws = getattr(user, 'web_status', None)
+        sm = {discord.Status.online: "🟢 Online", discord.Status.idle: "🌙 Idle", discord.Status.dnd: "⛔ DND", discord.Status.offline: "⚫ Offline"}
+        dvcs = f"▸ **Desktop:** {sm.get(ds, '⚫ Offline')}\n▸ **Mobile:** {sm.get(ms, '⚫ Offline')}\n▸ **Web:** {sm.get(ws, '⚫ Offline')}"
+        em = discord.Embed(
+            title="═══════════════════════════════",
+            description=(
+                f"💎 **BOOST LOG REPORT** {tag}\n\n"
+                f"**▸ العضو:** {user.mention}\n"
+                f"**▸ المعرف:** `{user.id}`\n"
+                f"**▸ الاسم:** {user.global_name or user.name}\n"
+                f"**▸ الشارات:** `{bdg}`\n\n"
+                f"═══════════════════════════════\n\n"
+                f"🕐 **SESSION & TIME METRICS**\n\n"
+                f"▸ **تاريخ الإنشاء:** <t:{int(user.created_at.timestamp())}:F>\n"
+                f"▸ **عمر الحساب:** `{acc_age} يوم`\n"
+                f"▸ **تاريخ الانضمام:** <t:{int(user.joined_at.timestamp())}:R>\n"
+                f"▸ **وقت بالسيرفر:** `{srv_age} يوم`\n\n"
+                f"═══════════════════════════════\n\n"
+                f"📱 **ACTIVE DEVICE STATUS**\n\n{dvcs}\n\n"
+                f"═══════════════════════════════\n\n"
+                f"🚀 **BOOST STATUS**\n\n"
+                f"▸ **المستوى:** Tier {guild.premium_tier}\n"
+                f"▸ **العدد:** {guild.premium_subscription_count}\n"
+                f"▸ **التقدم:** `{bar}` {progress_text}\n\n"
+                f"═══════════════════════════════\n\n"
+                f"🎖️ **ROLES**\n\n{rls}"
+            ),
+            color=0xBB6BD9,
+            timestamp=now_val
         )
-        def _build_boost_log_embed(user, guild, bar, progress_text, tag="(تجريبي)", now_val=None):
-            if now_val is None:
-                now_val = discord.utils.utcnow()
-            acc_age = (now_val - user.created_at).days if user.created_at else 0
-            srv_age = (now_val - user.joined_at).days if user.joined_at else 0
-            bdg = ", ".join([f.name.replace("_", " ").title() for f in user.public_flags if f]) or "No Badges"
-            rls = " ".join([r.mention for r in reversed(user.roles[1:])][:10]) or "لا توجد رتب"
-            sm = {
-                discord.Status.online: "🟢 Online",
-                discord.Status.idle: "🌙 Idle",
-                discord.Status.dnd: "⛔ DND",
-                discord.Status.offline: "⚫ Offline"
-            }
-            ds = getattr(user, 'desktop_status', None)
-            ms = getattr(user, 'mobile_status', None)
-            ws = getattr(user, 'web_status', None)
-            dvcs = (
-                f"▸ **Desktop:** {sm.get(ds, '⚫ Offline')}\n"
-                f"▸ **Mobile:** {sm.get(ms, '⚫ Offline')}\n"
-                f"▸ **Web:** {sm.get(ws, '⚫ Offline')}"
-            )
-            em = discord.Embed(
-                title="═══════════════════════════════",
-                description=(
-                    f"💎 **BOOST LOG REPORT** {tag}\n\n"
-                    f"**▸ العضو:** {user.mention}\n"
-                    f"**▸ المعرف:** `{user.id}`\n"
-                    f"**▸ الاسم:** {user.global_name or user.name}\n"
-                    f"**▸ الشارات:** `{bdg}`\n\n"
-                    f"═══════════════════════════════\n\n"
-                    f"🕐 **SESSION & TIME METRICS**\n\n"
-                    f"▸ **تاريخ الإنشاء:** <t:{int(user.created_at.timestamp())}:F>\n"
-                    f"▸ **عمر الحساب:** `{acc_age} يوم`\n"
-                    f"▸ **تاريخ الانضمام:** <t:{int(user.joined_at.timestamp())}:R>\n"
-                    f"▸ **وقت بالسيرفر:** `{srv_age} يوم`\n\n"
-                    f"═══════════════════════════════\n\n"
-                    f"📱 **ACTIVE DEVICE STATUS**\n\n"
-                    f"{dvcs}\n\n"
-                    f"═══════════════════════════════\n\n"
-                    f"🚀 **BOOST STATUS**\n\n"
-                    f"▸ **المستوى:** Tier {guild.premium_tier}\n"
-                    f"▸ **العدد:** {guild.premium_subscription_count}\n"
-                    f"▸ **التقدم:** `{bar}` {progress_text}\n\n"
-                    f"═══════════════════════════════\n\n"
-                    f"🎖️ **ROLES**\n\n"
-                    f"{rls}"
-                ),
-                color=0xBB6BD9,
-                timestamp=now_val
-            )
-            em.set_thumbnail(url=user.display_avatar.url)
-            em.set_image(url=user.display_avatar.url)
-            em.set_footer(
-                text=f"═══════════════════════════════\n🌐 {guild.name} • {now_val.strftime('%Y-%m-%d %H:%M')}\n═══════════════════════════════",
-                icon_url=guild.icon.url if guild.icon else None
-            )
-            return em
+        em.set_thumbnail(url=user.display_avatar.url)
+        em.set_image(url=user.display_avatar.url)
+        em.set_footer(
+            text=f"═══════════════════════════════\n🌐 {guild.name} • {now_val.strftime('%Y-%m-%d %H:%M')}\n═══════════════════════════════",
+            icon_url=guild.icon.url if guild.icon else None
+        )
+        return em
 
-        log_embed = _build_boost_log_embed(interaction.user, interaction.guild, bar, progress_text, "(تجريبي)")
+    try:
         log_channel = None
         for ch in interaction.guild.text_channels:
             if "boost" in ch.name.lower():
@@ -4575,7 +4546,8 @@ async def boost_test_cmd(interaction: discord.Interaction):
                 log_channel = interaction.guild.get_channel(int(log_ch_id))
         if log_channel:
             try:
-                log_embed = _build_boost_log_embed(interaction.user, interaction.guild, bar, progress_text, "(تجريبي)")
+                bar2, progress_text2, _ = calculate_boost_progress(interaction.guild)
+                log_embed = _build_boost_log_embed(interaction.user, interaction.guild, bar2, progress_text2, "(تجريبي)")
                 await log_channel.send(embed=log_embed)
             except Exception as e:
                 print(f"[BOOST TEST LOG] Embed failed: {e}, sending simple message", flush=True)
