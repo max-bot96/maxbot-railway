@@ -10,6 +10,7 @@ from datetime import datetime
 
 PRAYER_API = "https://api.aladhan.com/v1/timingsByCity"
 PRAYER_METHOD = 4
+AI_API_KEY = os.getenv("AI_API_KEY")
 
 GLOBAL_ZONES = [
     {"city": "Makkah", "country": "SA", "zone": "Asia/Riyadh", "locale_key": "ar"},
@@ -39,24 +40,27 @@ PRAYER_NAMES = {"ar": ["الفجر", "الظهر", "العصر", "المغرب",
                 "en": ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"],
                 "tr": ["İmsak", "Öğle", "İkindi", "Akşam", "Yatsı"],
                 "fr": ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"],
-                "de": ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"],
                 "id": ["Subuh", "Dzuhur", "Ashar", "Maghrib", "Isya"],
-                "ms": ["Subuh", "Zuhur", "Asar", "Maghrib", "Isyak"],
+                "ru": ["Фаджр", "Зухр", "Аср", "Магриб", "Иша"],
                 "ur": ["فجر", "ظہر", "عصر", "مغرب", "عشاء"],
                 "fa": ["صبح", "ظهر", "عصر", "مغرب", "عشا"],
-                "ru": ["Фаджр", "Зухр", "Аср", "Магриб", "Иша"],
-                "pt": ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"],
+                "ms": ["Subuh", "Zuhur", "Asar", "Maghrib", "Isyak"],
                 "bn": ["ফজর", "যোহর", "আসর", "মাগরিব", "ইশা"],
                 "ja": ["ファジル", "ズフル", "アスル", "マグリブ", "イシャ"]}
 
-TZ_LOCALE_MAP = {}
-for z in GLOBAL_ZONES:
-    TZ_LOCALE_MAP[z["zone"]] = z["locale_key"]
-
 ADHAN_DUA = 'ترديد الأذان مع المؤذن، ثم الصلاة على النبي ﷺ والدعاء: "اللهم رب هذه الدعوة التامة، والصلاة القائمة، آتِ محمداً الوسيلة والفضيلة، وابعثه مقاماً محموداً الذي وعدته"'
 SAJDAH_HADITH = '«أَقْرَبُ مَا يَكُونُ الْعَبْدُ مِنْ رَبِّهِ وَهُوَ سَاجِدٌ، فَأَكْثِرُوا الدُّعَاءَ»'
-
 ALERTS_SENT = {}
+
+AI_MODEL = None
+if AI_API_KEY:
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=AI_API_KEY)
+        AI_MODEL = genai.GenerativeModel('gemini-pro')
+        print("[EGR] ✅ Gemini AI ready", flush=True)
+    except Exception as e:
+        print(f"[EGR] ❌ Gemini init failed: {e}", flush=True)
 
 
 def load_content():
@@ -64,14 +68,13 @@ def load_content():
         path = os.path.join(os.path.dirname(__file__), "..", "data", "islamic_content.json")
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
-    except:
+    except Exception as e:
+        print(f"[EGR] Content load error: {e}", flush=True)
         return {}
 
 
 def pick_random(items):
-    if not items:
-        return None
-    return random.choice(items)
+    return random.choice(items) if items else None
 
 
 def detect_locale(guild):
@@ -82,12 +85,44 @@ def detect_locale(guild):
     return "ar"
 
 
+def locale_to_lang(locale_key):
+    m = {"ar": "Arabic", "en": "English", "tr": "Turkish", "fr": "French",
+         "de": "German", "ru": "Russian", "id": "Indonesian", "ms": "Malay",
+         "ur": "Urdu", "fa": "Persian", "bn": "Bengali", "ja": "Japanese",
+         "pt": "Portuguese"}
+    return m.get(locale_key, "Arabic")
+
+
+async def generate_ai_content(prompt, lang="Arabic"):
+    if not AI_MODEL:
+        return None
+    try:
+        full_prompt = f"Respond in {lang}.\n{prompt}"
+        response = AI_MODEL.generate_content(full_prompt, generation_config={
+            "max_output_tokens": 300, "temperature": 0.8
+        })
+        return response.text.strip() if response and response.text else None
+    except Exception as e:
+        print(f"[EGR] AI error: {e}", flush=True)
+        return None
+
+
+def find_best_channel(guild):
+    ch = guild.system_channel
+    if ch and ch.permissions_for(guild.me).send_messages and ch.permissions_for(guild.me).embed_links:
+        return ch
+    for ch in guild.text_channels:
+        if ch.permissions_for(guild.me).send_messages and ch.permissions_for(guild.me).embed_links:
+            return ch
+    return None
+
+
 class Egr(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.content = load_content()
         self.session = None
-        self._prayer_cache = {}
+        self.use_ai = AI_MODEL is not None
 
     async def _get_prayer_times(self, city, country):
         url = f"{PRAYER_API}?city={city}&country={country}&method={PRAYER_METHOD}"
@@ -97,64 +132,132 @@ class Egr(commands.Cog):
             async with self.session.get(url, timeout=10) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    timings = data.get("data", {}).get("timings", {})
-                    timezone = data.get("data", {}).get("meta", {}).get("timezone", "UTC")
-                    return timings, timezone
+                    t = data.get("data", {}).get("timings", {})
+                    tz = data.get("data", {}).get("meta", {}).get("timezone", "UTC")
+                    return t, tz
         except:
             pass
         return None, None
 
     def _get_prayer_name(self, lang_key, index):
         names = PRAYER_NAMES.get(lang_key, PRAYER_NAMES["en"])
-        if index < len(names):
-            return names[index]
-        return PRAYER_KEYS[index]
+        return names[index] if index < len(names) else PRAYER_KEYS[index]
 
-    # ── Auto Hourly Adhkar/Duas ──
+    # ── AI Hourly Generator ──
 
     @tasks.loop(hours=1)
     async def auto_hourly(self):
         await self.bot.wait_until_ready()
         for guild in self.bot.guilds:
-            channel = guild.system_channel or next(
-                (ch for ch in guild.text_channels
-                 if ch.permissions_for(guild.me).send_messages and
-                 ch.permissions_for(guild.me).embed_links),
-                None
-            )
+            channel = find_best_channel(guild)
             if not channel:
                 continue
 
-            pool = []
-            for item in self.content.get("adhkar_morning", []):
-                pool.append(("🌅 أذكار", item))
-            for item in self.content.get("adhkar_evening", []):
-                pool.append(("🌆 أذكار المساء", item))
-            for item in self.content.get("duas", []):
-                pool.append(("🤲 دعاء", item))
-            if not pool:
-                continue
-            label, text = random.choice(pool)
+            lang_key = detect_locale(guild)
+            lang_name = locale_to_lang(lang_key)
 
-            embed = discord.Embed(
-                title=label,
-                description=str(text)[:1024],
-                color=0x107c41,
-                timestamp=datetime.utcnow()
-            )
-            embed.set_footer(text="🕌 تذكير تلقائي كل ساعة")
+            if self.use_ai:
+                prompt = (
+                    f"Write a beautiful, short Islamic reminder in {lang_name} ({lang_key}). "
+                    f"Begin with a Quranic verse (Arabic + translation in {lang_name}), "
+                    f"then give a short reflection, then a prophetic hadith or wisdom, "
+                    f"then end with a short Dua. Use emojis. "
+                    f"Keep it under 1000 characters. Format for Discord."
+                )
+                ai_text = await generate_ai_content(prompt, lang_name)
+            else:
+                ai_text = None
 
-            if random.random() < 0.3:
-                ayah = pick_random(self.content.get("ayat"))
-                if ayah:
-                    embed.add_field(name="📖 آية وتدبر",
-                                    value=f"*{ayah.get('text', '')}*\n{ayah.get('tafsir', '')}"[:1024],
-                                    inline=False)
+            if ai_text:
+                embed = discord.Embed(
+                    title="✨ نفحة إيمانية",
+                    description=ai_text[:2000],
+                    color=0x107c41,
+                    timestamp=datetime.utcnow()
+                )
+                embed.set_footer(text="🕌 توليد AI | كل ساعة")
+            else:
+                pool = []
+                for item in self.content.get("adhkar_morning", []):
+                    pool.append(("🌅 أذكار", item))
+                for item in self.content.get("adhkar_evening", []):
+                    pool.append(("🌆 أذكار المساء", item))
+                for item in self.content.get("duas", []):
+                    pool.append(("🤲 دعاء", item))
+                if not pool:
+                    continue
+                label, text = random.choice(pool)
+                embed = discord.Embed(
+                    title=label,
+                    description=str(text)[:1024],
+                    color=0x107c41,
+                    timestamp=datetime.utcnow()
+                )
+                embed.set_footer(text="🕌 تذكير كل ساعة")
+                if random.random() < 0.3:
+                    ayah = pick_random(self.content.get("ayat"))
+                    if ayah:
+                        embed.add_field(name="📖 آية وتدبر",
+                                        value=f"*{ayah.get('text', '')}*\n{ayah.get('tafsir', '')}"[:1024],
+                                        inline=False)
+
             try:
                 await channel.send(embed=embed)
                 await asyncio.sleep(0.3)
             except:
                 pass
+
+    # ── AI Response on Mention ──
+
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        if message.author.bot or not message.guild:
+            return
+        if not self.bot.user.mentioned_in(message):
+            return
+
+        question = message.content.replace(f'<@{self.bot.user.id}>', '').replace(f'<@!{self.bot.user.id}>', '').strip()
+
+        if not question:
+            await message.reply(
+                "🌟 أنا بوت الأجر! اسألني عن أي شيء إسلامي:\n"
+                "• تفسير آية\n"
+                "• حديث نبوي\n"
+                "• فضل عبادة\n"
+                "• دعاء\n"
+                "• أحكام الصلاة"
+            )
+            return
+
+        if not self.use_ai:
+            await message.reply("⚠️ الذكاء الاصطناعي غير مفعل. أضف `AI_API_KEY` في Railway Variables.")
+            return
+
+        async with message.channel.typing():
+            lang_key = detect_locale(message.guild)
+            lang_name = locale_to_lang(lang_key)
+
+            prompt = (
+                f"You are an Islamic scholar assistant in a Discord bot. "
+                f"Answer the following question in {lang_name} using Quran and Sunnah. "
+                f"Be concise, accurate, and use emojis. Keep it under 1500 characters.\n\n"
+                f"Question: {question}"
+            )
+            answer = await generate_ai_content(prompt, lang_name)
+
+            if answer:
+                embed = discord.Embed(
+                    title=f"💡 {lang_name} Islamic Answer",
+                    description=answer[:2000],
+                    color=0x107c41
+                )
+                embed.set_footer(text=f"🤖 AI | سؤال: {question[:50]}")
+                try:
+                    await message.reply(embed=embed)
+                except:
+                    await message.reply(answer[:2000])
+            else:
+                await message.reply("⚠️ عذراً، واجهت مشكلة في توليد الرد. حاول مرة أخرى.")
 
     # ── Auto Global Prayer Scanner ──
 
@@ -194,20 +297,14 @@ class Egr(commands.Cog):
                     description=f"{now_local.strftime('%Y-%m-%d %H:%M')} {tz_str}",
                     color=0x107c41
                 )
-                embed.add_field(name="📖 الذكر عند سماع الأذان", value=ADHAN_DUA, inline=False)
+                embed.add_field(name="📖 الذكر عند الأذان", value=ADHAN_DUA, inline=False)
                 embed.add_field(name="💡 أثر صلاتك", value=f"*{SAJDAH_HADITH}*", inline=False)
-                embed.set_footer(text=f"🌍 {zone['city']} | توقيت تلقائي")
+                embed.set_footer(text=f"🌍 {zone['city']}")
 
                 for guild in self.bot.guilds:
-                    glocale = detect_locale(guild)
-                    if glocale != lang_key:
+                    if detect_locale(guild) != lang_key:
                         continue
-                    channel = guild.system_channel or next(
-                        (ch for ch in guild.text_channels
-                         if ch.permissions_for(guild.me).send_messages and
-                         ch.permissions_for(guild.me).embed_links),
-                        None
-                    )
+                    channel = find_best_channel(guild)
                     if not channel:
                         continue
                     try:
@@ -225,6 +322,10 @@ class Egr(commands.Cog):
         self.auto_prayer_scanner.cancel()
 
     async def cog_load(self):
+        if self.use_ai:
+            print("[EGR] 🤖 AI mode active - generating unique content hourly", flush=True)
+        else:
+            print("[EGR] 📖 JSON mode - set AI_API_KEY for AI generation", flush=True)
         self.auto_hourly.start()
         self.auto_prayer_scanner.start()
 
