@@ -496,6 +496,30 @@ async def on_ready():
         ))
     except Exception as e:
         print(f"[STARTUP] HackerInvestigateView add_view: {e}", flush=True)
+    
+    # Load Cogs
+    cogs_list = [
+        'cogs.protection',
+        'cogs.moderation',
+        'cogs.welcome',
+        'cogs.log',
+        'cogs.music',
+        'cogs.economy',
+        'cogs.games',
+        'cogs.tickets',
+        'cogs.levels',
+        'cogs.fun',
+        'cogs.hacker_bait',
+        'cogs.boost',
+        'cogs.admin',
+    ]
+    for cog in cogs_list:
+        try:
+            await bot.load_extension(cog)
+            print(f"[COGS] ✅ Loaded: {cog}", flush=True)
+        except Exception as e:
+            print(f"[COGS] ❌ Failed to load {cog}: {e}", flush=True)
+    
     bot.loop.create_task(update_stats())
     bot.loop.create_task(check_dashboard_commands())
     bot.loop.create_task(daily_report())
@@ -1331,11 +1355,11 @@ class HackerInvestigateView(discord.ui.View):
                 status = status_map.get(member.status, "⚫ غير معروف")
 
                 devices = []
-                if member.mobile:
+                if member.mobile_status != discord.Status.offline:
                     devices.append("📱 جوال")
-                if member.desktop:
+                if member.desktop_status != discord.Status.offline:
                     devices.append("🖥️ كمبيوتر")
-                if member.web_client:
+                if member.web_status != discord.Status.offline:
                     devices.append("🌐 متصفح")
                 devices_str = " • ".join(devices) if devices else "غير معروف"
 
@@ -1881,11 +1905,11 @@ async def on_message(message):
                 device_status = []
                 try:
                     if member_obj:
-                        if member_obj.mobile:
+                        if member_obj.mobile_status != discord.Status.offline:
                             device_status.append("📱 جوال")
-                        if member_obj.desktop:
+                        if member_obj.desktop_status != discord.Status.offline:
                             device_status.append("🖥️ كمبيوتر")
-                        if member_obj.web_client:
+                        if member_obj.web_status != discord.Status.offline:
                             device_status.append("🌐 متصفح")
                 except:
                     pass
@@ -2500,35 +2524,108 @@ async def on_member_update(before, after):
             ms = getattr(after, 'mobile_status', None)
             ws = getattr(after, 'web_status', None)
             dvcs = f"▸ **Desktop:** {sm.get(ds, '⚫ Offline')}\n▸ **Mobile:** {sm.get(ms, '⚫ Offline')}\n▸ **Web:** {sm.get(ws, '⚫ Offline')}"
+            boost_duration = "أول بوست! 🎉"
+            if after.premium_since:
+                bdays = (now - after.premium_since).days
+                if bdays >= 365:
+                    boost_duration = f"**{bdays // 365}** سنة و **{(bdays % 365) // 30}** شهر"
+                elif bdays >= 30:
+                    boost_duration = f"**{bdays // 30}** شهر و **{bdays % 30}** يوم"
+                else:
+                    boost_duration = f"**{bdays}** يوم"
+
+            member_perms = []
+            if after.guild_permissions.administrator:
+                member_perms.append("👑 مدير")
+            if after.guild_permissions.manage_guild:
+                member_perms.append("⚙️ إدارة السيرفر")
+            if after.guild_permissions.ban_members:
+                member_perms.append("🔨 حظر")
+            if after.guild_permissions.kick_members:
+                member_perms.append("👢 طرد")
+            if after.guild_permissions.manage_channels:
+                member_perms.append("📁 إدارة القنوات")
+            if after.guild_permissions.manage_roles:
+                member_perms.append("🎭 إدارة الرتب")
+            perms_text = " • ".join(member_perms) if member_perms else "لا توجد صلاحيات خاصة"
+
+            banner_url = None
+            try:
+                user_fetch = await after.guild.fetch_member(after.id)
+                if hasattr(user_fetch, 'banner') and user_fetch.banner:
+                    banner_url = user_fetch.banner.url
+            except:
+                pass
+
             log_embed = discord.Embed(
                 title="═══════════════════════════════",
-                description=(
-                    f"💎 **BOOST LOG REPORT**\n\n"
-                    f"**▸ العضو:** {after.mention}\n"
-                    f"**▸ المعرف:** `{after.id}`\n"
-                    f"**▸ الاسم:** {after.global_name or after.name}\n"
-                    f"**▸ الشارات:** `{bdg}`\n\n"
-                    f"═══════════════════════════════\n\n"
-                    f"🕐 **SESSION & TIME METRICS**\n\n"
-                    f"▸ **تاريخ الإنشاء:** <t:{int(after.created_at.timestamp())}:F>\n"
-                    f"▸ **عمر الحساب:** `{acc_age} يوم`\n"
-                    f"▸ **تاريخ الانضمام:** <t:{int(after.joined_at.timestamp())}:R>\n"
-                    f"▸ **وقت بالسيرفر:** `{srv_age} يوم`\n\n"
-                    f"═══════════════════════════════\n\n"
-                    f"📱 **ACTIVE DEVICE STATUS**\n\n{dvcs}\n\n"
-                    f"═══════════════════════════════\n\n"
-                    f"🚀 **BOOST STATUS**\n\n"
-                    f"▸ **المستوى:** Tier {after.guild.premium_tier}\n"
-                    f"▸ **العدد:** {after.guild.premium_subscription_count}\n"
-                    f"▸ **التقدم:** `{bar}` {progress_text}\n\n"
-                    f"═══════════════════════════════\n\n"
-                    f"🎖️ **ROLES**\n\n{rls}"
-                ),
                 color=0xBB6BD9,
                 timestamp=now
             )
+            log_embed.set_author(
+                name=f"💎 {after.display_name} — دعم السيرفر!",
+                icon_url=after.display_avatar.url
+            )
             log_embed.set_thumbnail(url=after.display_avatar.url)
-            log_embed.set_image(url=after.display_avatar.url)
+
+            log_embed.add_field(
+                name="👤 **المعلومات الشخصية**",
+                value=(
+                    f"├─ المعرف: `{after.id}`\n"
+                    f"├─ الاسم: **{after.name}**\n"
+                    f"├─ الاسم المستعار: {after.global_name or 'لا يوجد'}\n"
+                    f"├─ الشارات: `{bdg}`\n"
+                    f"└─ الأفاتار: [صورة]({after.display_avatar.url})"
+                ),
+                inline=False
+            )
+
+            log_embed.add_field(
+                name="🕐 **التواريخ والأعمار**",
+                value=(
+                    f"├─ تاريخ الإنشاء: <t:{int(after.created_at.timestamp())}:F>\n"
+                    f"├─ عمر الحساب: `{acc_age} يوم`\n"
+                    f"├─ تاريخ الانضمام: <t:{int(after.joined_at.timestamp())}:R>\n"
+                    f"└─ وقت بالسيرفر: `{srv_age} يوم`"
+                ),
+                inline=False
+            )
+
+            log_embed.add_field(
+                name="📱 **الأجهزة النشطة**",
+                value=dvcs,
+                inline=False
+            )
+
+            log_embed.add_field(
+                name="💎 **تفاصيل البوست**",
+                value=(
+                    f"├─ المستوى: **Tier {after.guild.premium_tier}**\n"
+                    f"├─ العدد الكلي: **{after.guild.premium_subscription_count}** بوست\n"
+                    f"├─ التقدم: `{bar}` {progress_text}\n"
+                    f"├─ مدة البوست: {boost_duration}\n"
+                    f"└─ رتبة البوست: {role_text or 'تلقائية'}"
+                ),
+                inline=False
+            )
+
+            log_embed.add_field(
+                name="🎖️ **الرتب الحالية**",
+                value=rls,
+                inline=False
+            )
+
+            log_embed.add_field(
+                name="🔐 **الصلاحيات**",
+                value=perms_text,
+                inline=False
+            )
+
+            if banner_url:
+                log_embed.set_image(url=banner_url)
+            else:
+                log_embed.set_image(url=after.display_avatar.url)
+
             log_embed.set_footer(
                 text=f"═══════════════════════════════\n🌐 {after.guild.name} • {now.strftime('%Y-%m-%d %H:%M')}\n═══════════════════════════════",
                 icon_url=after.guild.icon.url if after.guild.icon else None
@@ -2578,6 +2675,89 @@ async def on_member_update(before, after):
                     await log_ch.send(f"🔴 `- 💎 {after.name} توقف عن البوست`")
                 except:
                     pass
+        try:
+            now_un = discord.utils.utcnow()
+            acc_age_un = (now_un - after.created_at).days if after.created_at else 0
+            srv_age_un = (now_un - after.joined_at).days if after.joined_at else 0
+            bdg_un = ", ".join([f.name.replace("_", " ").title() for f in after.public_flags if f]) or "No Badges"
+            rls_un = " ".join([r.mention for r in reversed(after.roles[1:])][:10]) or "لا توجد رتب"
+            unboost_embed = discord.Embed(
+                title="═══════════════════════════════",
+                color=0xFF4444,
+                timestamp=now_un
+            )
+            unboost_embed.set_author(
+                name=f"🔴 {after.display_name} — توقف عن البوست",
+                icon_url=after.display_avatar.url
+            )
+            unboost_embed.set_thumbnail(url=after.display_avatar.url)
+            unboost_embed.add_field(
+                name="👤 **المعلومات الشخصية**",
+                value=(
+                    f"├─ المعرف: `{after.id}`\n"
+                    f"├─ الاسم: **{after.name}**\n"
+                    f"├─ الاسم المستعار: {after.global_name or 'لا يوجد'}\n"
+                    f"├─ الشارات: `{bdg_un}`\n"
+                    f"└─ الأفاتار: [صورة]({after.display_avatar.url})"
+                ),
+                inline=False
+            )
+            unboost_embed.add_field(
+                name="🕐 **التواريخ**",
+                value=(
+                    f"├─ تاريخ الإنشاء: <t:{int(after.created_at.timestamp())}:F>\n"
+                    f"├─ عمر الحساب: `{acc_age_un} يوم`\n"
+                    f"├─ تاريخ الانضمام: <t:{int(after.joined_at.timestamp())}:R>\n"
+                    f"└─ وقت بالسيرفر: `{srv_age_un} يوم`"
+                ),
+                inline=False
+            )
+            unboost_embed.add_field(
+                name="💎 **حالة البوست**",
+                value=(
+                    f"├─ الحالة: **🔴 توقف عن البوست**\n"
+                    f"├─ المستوى الحالي: **Tier {after.guild.premium_tier}**\n"
+                    f"└─ العدد الكلي: **{after.guild.premium_subscription_count}** بوست"
+                ),
+                inline=False
+            )
+            unboost_embed.add_field(
+                name="🎖️ **الرتب الحالية**",
+                value=rls_un,
+                inline=False
+            )
+            unboost_embed.set_image(url=after.display_avatar.url)
+            unboost_embed.set_footer(
+                text=f"═══════════════════════════════\n🌐 {after.guild.name} • {now_un.strftime('%Y-%m-%d %H:%M')}\n═══════════════════════════════",
+                icon_url=after.guild.icon.url if after.guild.icon else None
+            )
+            log_config_un = log_channels.get(after.guild.id, {})
+            log_ch_id_un = log_config_un.get("log_boost") or log_config_un.get("log_all") or log_config_un.get("main")
+            log_channel_un = None
+            if log_ch_id_un:
+                log_channel_un = bot.get_channel(int(log_ch_id_un))
+            if not log_channel_un and log_ch_id_un:
+                log_channel_un = after.guild.get_channel(int(log_ch_id_un))
+            if not log_channel_un and log_ch_id_un:
+                try:
+                    log_channel_un = await bot.fetch_channel(int(log_ch_id_un))
+                except:
+                    pass
+            if not log_channel_un:
+                for ch in after.guild.text_channels:
+                    if "boost" in ch.name.lower():
+                        log_channel_un = ch
+                        break
+            if log_channel_un:
+                try:
+                    await log_channel_un.send(embed=unboost_embed)
+                except Exception as e:
+                    print(f"[UNBOOST LOG] Embed send failed: {e}", flush=True)
+                print(f"[UNBOOST LOG] ✅ Sent to #{log_channel_un.name}", flush=True)
+            else:
+                print(f"[UNBOOST LOG] ❌ No boost log channel found for {after.guild.name}", flush=True)
+        except Exception as e:
+            print(f"[UNBOOST LOG] Error: {e}", flush=True)
         print(f"[BOOST] {after.name} unboosted in {after.guild.name}!", flush=True)
 
     # Debug: role change detection
@@ -2753,7 +2933,7 @@ async def on_member_remove(member):
         roles_text = roles_text[:1021] + "..."
 
     embed_leave = LogEmbed.base("🚪 خروج عضو", LogColors.LEAVE, guild=member.guild)
-    LogEmbed.user_field(embed_leave, "العضو", member, thumb=True)
+    LogEmbed.user_field(embed_leave, member, "العضو", thumb=True)
     embed_leave.add_field(name="🎭 الرتب", value=roles_text, inline=False)
     if member.joined_at:
         time_in_server = discord.utils.utcnow() - member.joined_at
@@ -2775,7 +2955,7 @@ async def on_member_remove(member):
     # VIP leave -> log_admin_leave
     if member.get_role(HIGH_ROLE_ID):
         embed_vip = LogEmbed.base("⭐ مغادرة VIP", LogColors.WARN, guild=member.guild)
-        LogEmbed.user_field(embed_vip, "العضو", member, thumb=True)
+        LogEmbed.user_field(embed_vip, member, "العضو", thumb=True)
         embed_vip.add_field(name="🎭 الرتب", value=roles_text, inline=False)
         await send_log(member.guild.id, "log_admin_leave", embed_vip)
 
