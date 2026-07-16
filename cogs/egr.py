@@ -8,7 +8,6 @@ import asyncio
 from datetime import datetime, timezone, timedelta
 
 DATA_FILE = "bot_data.json"
-CONTENT_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "islamic_content.json")
 PRAYER_API = "https://api.aladhan.com/v1/timingsByCity"
 PRAYER_METHOD = 4
 
@@ -83,56 +82,6 @@ class Egr(commands.Cog):
         data["egr"][str(guild_id)] = config
         save_data(data)
 
-    def _get_hourly_content(self, index):
-        if not self.content:
-            return None, "لا توجد بيانات"
-        types = HOURLY_TYPES
-        t = types[index % len(types)]
-        if t == "adhkar":
-            items = self.content.get("adhkar_morning", [])
-            label = "🌅 أذكار الصباح"
-        elif t == "adhkar_evening":
-            items = self.content.get("adhkar_evening", [])
-            label = "🌆 أذكار المساء"
-        elif t == "ayah":
-            items = self.content.get("ayat", [])
-            label = "📖 آية وتفسير"
-        elif t == "hadith":
-            items = self.content.get("ahadith", [])
-            label = "📚 حديث نبوي"
-        elif t == "names":
-            items = self.content.get("names_of_allah", [])
-            label = "ﷲ اسم من أسماء الله الحسنى"
-        elif t == "dua":
-            items = self.content.get("duas", [])
-            label = "🤲 دعاء"
-        elif t == "benefit":
-            items = self.content.get("benefits", [])
-            label = "💡 فائدة دينية"
-        elif t == "story":
-            items = self.content.get("stories", [])
-            label = "📖 قصة إسلامية"
-        else:
-            items = self.content.get("adhkar_morning", [])
-            label = "🌅 أذكار"
-        if not items:
-            return None, "لا توجد محتوى"
-        item = random.choice(items)
-        if isinstance(item, dict):
-            if "text" in item:
-                text = item["text"]
-                if t == "ayah":
-                    text += f"\nسورة {item.get('surah', '')} آية {item.get('ayah', '')}"
-                    if item.get("tafsir"):
-                        text += f"\n\n📝 **التفسير:** {item['tafsir']}"
-                elif t == "names":
-                    text = f"**{item['name']}**\n{item['meaning']}"
-            else:
-                text = str(item)
-        else:
-            text = str(item)
-        return label, text
-
     async def _fetch_prayer_times(self, city, country):
         url = f"{PRAYER_API}?city={city}&country={country}&method={PRAYER_METHOD}"
         try:
@@ -157,9 +106,18 @@ class Egr(commands.Cog):
             if timings:
                 self.prayer_cache[loc["name"]] = timings
                 print(f"[EGR] Prayer times loaded: {loc['name']}", flush=True)
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
         self._prayer_cache_day = cache_key
         print(f"[EGR] Prayer cache updated: {len(self.prayer_cache)} cities", flush=True)
+
+    def _get_random_item(self, category, field=None):
+        items = self.content.get(category, [])
+        if not items:
+            return None
+        item = random.choice(items)
+        if isinstance(item, dict) and field:
+            return item.get(field, str(item))
+        return item
 
     # ── Background Tasks ──
     @tasks.loop(hours=1)
@@ -177,12 +135,44 @@ class Egr(commands.Cog):
             if not channel:
                 continue
             idx = config.get("hourly_index", 0)
-            label, text = self._get_hourly_content(idx)
-            if not label:
+            types = HOURLY_TYPES
+            t = types[idx % len(types)]
+            if t == "adhkar":
+                items = self.content.get("adhkar_morning", [])
+                label = "🌅 أذكار الصباح"
+            elif t == "adhkar_evening":
+                items = self.content.get("adhkar_evening", [])
+                label = "🌆 أذكار المساء"
+            elif t == "ayah":
+                item = self._get_random_item("ayat")
+                items = [f"{item['text']}\n*{item.get('tafsir', '')}*"] if item else []
+                label = "📖 آية وتفسير"
+            elif t == "hadith":
+                items = self.content.get("ahadith", [])
+                label = "📚 حديث نبوي"
+            elif t == "names":
+                item = self._get_random_item("names_of_allah")
+                items = [f"**{item['name']}**\n{item['meaning']}"] if item else []
+                label = "ﷲ اسم من أسماء الله الحسنى"
+            elif t == "dua":
+                items = self.content.get("duas", [])
+                label = "🤲 دعاء"
+            elif t == "benefit":
+                items = self.content.get("benefits", [])
+                label = "💡 فائدة دينية"
+            elif t == "story":
+                items = self.content.get("stories", [])
+                label = "📖 قصة إسلامية"
+            else:
+                items = self.content.get("adhkar_morning", [])
+                label = "🌅 أذكار"
+            if not items:
                 continue
+            text = random.choice(items) if isinstance(items, list) else items
+            text = str(text)[:1024]
             embed = discord.Embed(
                 title=label,
-                description=text[:1024] if len(text) > 1024 else text,
+                description=text,
                 color=0x107c41,
                 timestamp=datetime.now(timezone.utc)
             )
@@ -232,7 +222,8 @@ class Egr(commands.Cog):
                         continue
                     p_hour, p_min = int(parts[0]), int(parts[1])
                     if current_hour == p_hour and current_min == p_min:
-                        send_key = f"{guild_id_str}_{loc_name}_{prayer_key}_{today_str()}"
+                        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+                        send_key = f"{guild_id_str}_{loc_name}_{prayer_key}_{today}"
                         if self.last_prayers_sent.get(send_key):
                             continue
                         self.last_prayers_sent[send_key] = True
@@ -240,8 +231,7 @@ class Egr(commands.Cog):
                         await self._send_prayer_reminder(channel, guild, prayer_key, prayer_label, loc_name)
 
     async def _send_prayer_reminder(self, channel, guild, prayer_key, prayer_label, loc_name):
-        timings = self.prayer_cache.get(loc_name, {})
-        now = datetime.now(timezone.utc) + timedelta(hours=3)
+        now = datetime.now(timezone.utc)
         arabic_weekdays = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"]
         weekday_ar = arabic_weekdays[now.weekday()]
         months_ar = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
@@ -271,29 +261,73 @@ class Egr(commands.Cog):
         except Exception as e:
             print(f"[EGR] Prayer send error: {e}", flush=True)
 
-    # ── Commands ──
+    # ── The ONE Command ──
     @commands.command(name="اجر")
-    async def ajr_main(self, ctx):
+    async def ajr_unified(self, ctx):
+        config = self._get_config(ctx.guild.id)
+        city = config.get("city", "Makkah")
+        country = config.get("country", "SA")
+        city_name = config.get("city_name", "مكة المكرمة")
+
+        await ctx.typing()
+
+        timings = await self._fetch_prayer_times(city, country)
+
+        ayah_item = self._get_random_item("ayat")
+        hadith = self._get_random_item("ahadith")
+        dhikr = self._get_random_item("adhkar_morning")
+
+        now = datetime.now(timezone.utc) + timedelta(hours=3)
+        today_str = now.strftime("%Y-%m-%d")
+
         embed = discord.Embed(
-            title="🕌 بسم الله الرحمن الرحيم",
-            description="أهلاً بك في نظام **الأجر** - تذكير دائم بالله",
+            title="🕋 بَوَّابَةُ الأَجْرِ الإِسْلَامِيَّةُ الُموَحَّدَةُ",
+            description="جميع الأذكار والمواقيت والنفحات الإيمانية في شاشة واحدة.",
             color=0x107c41
         )
-        embed.add_field(name="📋 الأوامر المتاحة", value="""
-        `!اجر المدينة [الاسم]` - تعيين المدينة
-        `!اجر اذكار` - أذكار الصباح والمساء
-        `!اجر اية` - آية قرآنية مع التفسير
-        `!اجر حديث` - حديث نبوي شريف
-        `!اجر صلاه` - أوقات الصلاة اليوم
-        """, inline=False)
-        embed.add_field(name="⚙️ للإعداد", value="`!اجر تفعيل` - تفعيل الإرسال التلقائي\n`!اجر تعطيل` - إيقاف الإرسال التلقائي", inline=False)
-        embed.set_footer(text="ﷲ لا إله إلا الله")
+
+        prayers_text = "**المدينة:** " + city_name + "\n"
+        if timings:
+            prayers_text += (
+                f"• 🌆 الفجر: `{timings.get('Fajr', '---')}` | ☀️ الظهر: `{timings.get('Dhuhr', '---')}`\n"
+                f"• ⛅ العصر: `{timings.get('Asr', '---')}` | 🌅 المغرب: `{timings.get('Maghrib', '---')}`\n"
+                f"• 🌌 العشاء: `{timings.get('Isha', '---')}`"
+            )
+        else:
+            prayers_text += "⚠️ تعذر جلب أوقات الصلاة"
+        embed.add_field(name="🕒 مواقيت الصلاة اليوم:", value=prayers_text, inline=False)
+
+        if ayah_item:
+            ayah_text = ayah_item.get("text", "")
+            ayah_tafsir = ayah_item.get("tafsir", "")
+            ayah_str = f"*{ayah_text}*\n**التفسير:** {ayah_tafsir}"
+            embed.add_field(name="📖 آية وتدبر اليوم:", value=ayah_str[:1024], inline=False)
+
+        if hadith:
+            embed.add_field(name="📚 من مشكاة النبوة (حديث شريف):", value=hadith[:1024], inline=False)
+
+        if dhikr:
+            embed.add_field(name="📿 ذكر وتذكير الساعة:", value=dhikr[:1024], inline=False)
+
+        active_status = "🟢 مفعل" if config.get("active") else "🔴 غير مفعل"
+        embed.add_field(
+            name="⚙️ الإعدادات",
+            value=f"الإرسال التلقائي: {active_status}\n"
+                  f"`!المدينة [الاسم]` - تغيير المدينة\n"
+                  f"`!تلقائي تشغيل` - تفعيل التذكير\n"
+                  f"`!تلقائي إيقاف` - إيقاف التذكير",
+            inline=False
+        )
+
+        embed.set_footer(text=f"تاريخ العرض: {today_str} | البوت يعمل بنظام الجدولة الآلية كل ساعة وعند كل صلاة.")
         await ctx.send(embed=embed)
 
-    @commands.command(name="اجر_المدينة")
-    async def ajr_city(self, ctx, *, city_name=None):
+    # ── Settings Commands ──
+    @commands.command(name="المدينة")
+    async def set_city(self, ctx, *, city_name=None):
         if not city_name:
-            await ctx.send("❌ اكتب اسم المدينة: `!اجر المدينة مكة`")
+            names = "\n".join([f"• {c['name']} ({c['city']})" for c in DEFAULT_CITIES])
+            await ctx.send(f"❌ اكتب اسم المدينة. المدن المتاحة:\n{names}")
             return
         valid = [c for c in DEFAULT_CITIES if city_name in c["name"] or city_name.lower() in c["city"].lower()]
         if not valid:
@@ -308,109 +342,27 @@ class Egr(commands.Cog):
         self._save_config(ctx.guild.id, config)
         await ctx.send(f"✅ تم تعيين المدينة: **{loc['name']}**")
 
-    @commands.command(name="اجر_تفعيل")
-    @commands.has_permissions(administrator=True)
-    async def ajr_enable(self, ctx):
+    @commands.command(name="تلقائي")
+    async def auto_toggle(self, ctx, *, mode=None):
+        if mode not in ["تشغيل", "إيقاف"]:
+            await ctx.send("❌ استخدم: `!تلقائي تشغيل` أو `!تلقائي إيقاف`")
+            return
         config = self._get_config(ctx.guild.id)
-        config["active"] = True
-        config["channel_id"] = ctx.channel.id
-        if "city" not in config:
-            config["city"] = "Makkah"
-            config["country"] = "SA"
-            config["city_name"] = "مكة المكرمة"
-        if "hourly_index" not in config:
-            config["hourly_index"] = 0
-        self._save_config(ctx.guild.id, config)
-        await ctx.send(f"✅ تم تفعيل نظام الأجر في {ctx.channel.mention}")
-
-    @commands.command(name="اجر_تعطيل")
-    @commands.has_permissions(administrator=True)
-    async def ajr_disable(self, ctx):
-        config = self._get_config(ctx.guild.id)
-        config["active"] = False
-        self._save_config(ctx.guild.id, config)
-        await ctx.send("🔴 تم إيقاف نظام الأجر")
-
-    @commands.command(name="اجر_اذكار")
-    async def ajr_adhkar(self, ctx):
-        embed = discord.Embed(title="🌅 أذكار الصباح", color=0x107c41)
-        items = self.content.get("adhkar_morning", [])[:5]
-        for i, item in enumerate(items, 1):
-            embed.add_field(name=f"ذكر {i}", value=item[:200], inline=False)
-        await ctx.send(embed=embed)
-
-    @commands.command(name="اجر_اية")
-    async def ajr_ayah(self, ctx):
-        items = self.content.get("ayat", [])
-        if not items:
-            await ctx.send("❌ لا توجد بيانات")
-            return
-        item = random.choice(items)
-        embed = discord.Embed(
-            title=f"📖 {item['text']}",
-            description=f"سورة **{item['surah']}** آية {item['ayah']}",
-            color=0x107c41
-        )
-        embed.add_field(name="📝 التفسير", value=item.get("tafsir", "")[:1024], inline=False)
-        await ctx.send(embed=embed)
-
-    @commands.command(name="اجر_حديث")
-    async def ajr_hadith(self, ctx):
-        items = self.content.get("ahadith", [])
-        if not items:
-            await ctx.send("❌ لا توجد بيانات")
-            return
-        hadith = random.choice(items)
-        embed = discord.Embed(
-            title="📚 حديث نبوي شريف",
-            description=hadith[:1024],
-            color=0x107c41
-        )
-        await ctx.send(embed=embed)
-
-    @commands.command(name="اجر_صلاه")
-    async def ajr_prayer(self, ctx):
-        config = self._get_config(ctx.guild.id)
-        city = config.get("city", "Makkah")
-        country = config.get("country", "SA")
-        city_name = config.get("city_name", "مكة المكرمة")
-        await ctx.send("🕋 جاري جلب أوقات الصلاة...")
-        timings = await self._fetch_prayer_times(city, country)
-        if not timings:
-            await ctx.send("❌ تعذر جلب أوقات الصلاة")
-            return
-        now = datetime.now(timezone.utc) + timedelta(hours=3)
-        embed = discord.Embed(
-            title=f"🕌 أوقات الصلاة - {city_name}",
-            description=f"📅 اليوم: {now.strftime('%Y-%m-%d')}",
-            color=0x107c41
-        )
-        for key, label in PRAYER_NAMES.items():
-            if key == "Sunrise":
-                embed.add_field(name="🌅 الشروق", value=timings.get(key, "---"), inline=True)
-                continue
-            t = timings.get(key, "---")
-            p_hour, p_min = 0, 0
-            if ":" in t:
-                try:
-                    parts = t.split(":")
-                    p_hour, p_min = int(parts[0]), int(parts[1])
-                except:
-                    pass
-            passed = "(❌ فاتت)" if (now.hour > p_hour or (now.hour == p_hour and now.min > p_min)) and key != "Sunrise" else ""
-            embed.add_field(name=f"🕋 {label}", value=f"`{t}` {passed}", inline=True)
-        embed.set_footer(text="🔹 توقيت مكة المكرمة")
-        await ctx.send(embed=embed)
-
-    @commands.command(name="اجر_دعاء")
-    async def ajr_dua(self, ctx):
-        items = self.content.get("duas", [])
-        if not items:
-            await ctx.send("❌ لا توجد بيانات")
-            return
-        dua = random.choice(items)
-        embed = discord.Embed(title="🤲 دعاء", description=dua, color=0x107c41)
-        await ctx.send(embed=embed)
+        if mode == "تشغيل":
+            config["active"] = True
+            config["channel_id"] = ctx.channel.id
+            if "city" not in config:
+                config["city"] = "Makkah"
+                config["country"] = "SA"
+                config["city_name"] = "مكة المكرمة"
+            if "hourly_index" not in config:
+                config["hourly_index"] = 0
+            self._save_config(ctx.guild.id, config)
+            await ctx.send(f"✅ تم تفعيل الإرسال التلقائي في {ctx.channel.mention}")
+        else:
+            config["active"] = False
+            self._save_config(ctx.guild.id, config)
+            await ctx.send("🔴 تم إيقاف الإرسال التلقائي")
 
     @tasks.loop(hours=24)
     async def daily_prayer_update(self):
@@ -426,10 +378,6 @@ class Egr(commands.Cog):
         self.prayer_checker.start()
         self.daily_prayer_update.start()
         self.bot.loop.create_task(self.update_all_prayer_times())
-
-
-def today_str():
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
 async def setup(bot):
