@@ -24,6 +24,7 @@ TICKET_MANAGER_ROLE_ID = int(os.getenv("TICKET_MANAGER_ROLE_ID", "0"))
 HIGH_ROLE_ID = int(os.getenv("HIGH_ROLE_ID", "0"))
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 GITHUB_REPO = os.getenv("GITHUB_REPO", "")
+HACKER_ROLE_ID = int(os.getenv("HACKER_ROLE_ID", "1517202253281231028"))
 SECRET_KEY = os.getenv("SECRET_KEY", "maxbot-secret-key-change-me")
 DATA_FILE = "bot_data.json"
 
