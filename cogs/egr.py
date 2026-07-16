@@ -1,30 +1,56 @@
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 import json
 import os
 import random
 import aiohttp
 from datetime import datetime, timezone, timedelta
 
-DATA_FILE = "bot_data.json"
 PRAYER_API = "https://api.aladhan.com/v1/timingsByCity"
 PRAYER_METHOD = 4
-DATABASE_URL = os.getenv("DATABASE_URL")
 
+LOCALE_CITY_MAP = {
+    "ar": "Makkah", "ar_SA": "Makkah", "ar_AE": "Dubai", "ar_EG": "Cairo",
+    "ar_DZ": "Algiers", "ar_MA": "Rabat", "ar_TN": "Tunis", "ar_IQ": "Baghdad",
+    "ar_JO": "Amman", "ar_SY": "Damascus", "ar_SD": "Khartoum", "ar_LY": "Tripoli",
+    "en_US": "New York", "en_GB": "London", "en_CA": "Toronto", "en_AU": "Sydney",
+    "en_IN": "Mumbai", "en_PH": "Manila", "en_NG": "Lagos", "en_ZA": "Cape Town",
+    "en_KE": "Nairobi", "en_PK": "Karachi", "en_BD": "Dhaka",
+    "fr_FR": "Paris", "fr_BE": "Brussels", "fr_CH": "Geneva",
+    "de_DE": "Berlin", "de_AT": "Vienna", "de_CH": "Zurich",
+    "tr_TR": "Istanbul", "tr_CY": "Nicosia",
+    "es_ES": "Madrid", "es_MX": "Mexico City", "es_AR": "Buenos Aires",
+    "pt_BR": "Brasilia", "pt_PT": "Lisbon",
+    "ru_RU": "Moscow", "zh_CN": "Beijing", "ja_JP": "Tokyo",
+    "id_ID": "Jakarta", "ms_MY": "Kuala Lumpur", "bn_BD": "Dhaka",
+    "ur_PK": "Karachi", "fa_IR": "Tehran", "sw_KE": "Nairobi",
+    "hi_IN": "Mumbai", "ta_IN": "Chennai", "te_IN": "Hyderabad",
+    "ko_KR": "Seoul", "th_TH": "Bangkok", "vi_VN": "Ho Chi Minh City",
+    "nl_NL": "Rotterdam", "sv_SE": "Stockholm", "no_NO": "Oslo",
+    "da_DK": "Copenhagen", "fi_FI": "Helsinki", "pl_PL": "Warsaw",
+    "cs_CZ": "Prague", "hu_HU": "Budapest", "el_GR": "Athens",
+    "ro_RO": "Bucharest", "bg_BG": "Sofia", "sr_RS": "Belgrade",
+    "uk_UA": "Kyiv", "he_IL": "Jerusalem", "ar_IL": "Jerusalem",
+}
 
-def load_data():
-    try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
-
-def save_data(data):
-    try:
-        with open(DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-    except:
-        pass
+COUNTRY_OVERRIDES = {
+    "Makkah": "SA", "Dubai": "AE", "Cairo": "EG", "Algiers": "DZ",
+    "Rabat": "MA", "Tunis": "TN", "Baghdad": "IQ", "Amman": "JO",
+    "Damascus": "SY", "Khartoum": "SD", "Tripoli": "LY", "New York": "US",
+    "London": "GB", "Toronto": "CA", "Sydney": "AU", "Mumbai": "IN",
+    "Manila": "PH", "Lagos": "NG", "Cape Town": "ZA", "Nairobi": "KE",
+    "Karachi": "PK", "Dhaka": "BD", "Paris": "FR", "Brussels": "BE",
+    "Geneva": "CH", "Berlin": "DE", "Vienna": "AT", "Zurich": "CH",
+    "Istanbul": "TR", "Nicosia": "CY", "Madrid": "ES", "Mexico City": "MX",
+    "Buenos Aires": "AR", "Brasilia": "BR", "Lisbon": "PT",
+    "Moscow": "RU", "Beijing": "CN", "Tokyo": "JP", "Jakarta": "ID",
+    "Kuala Lumpur": "MY", "Tehran": "IR", "Chennai": "IN",
+    "Hyderabad": "IN", "Seoul": "KR", "Bangkok": "TH",
+    "Ho Chi Minh City": "VN", "Rotterdam": "NL", "Stockholm": "SE",
+    "Oslo": "NO", "Copenhagen": "DK", "Helsinki": "FI", "Warsaw": "PL",
+    "Prague": "CZ", "Budapest": "HU", "Athens": "GR", "Bucharest": "RO",
+    "Sofia": "BG", "Belgrade": "RS", "Kyiv": "UA", "Jerusalem": "IL",
+}
 
 
 class Egr(commands.Cog):
@@ -32,8 +58,6 @@ class Egr(commands.Cog):
         self.bot = bot
         self.content = self._load_content()
         self.session = None
-        self.pool = None
-        self.use_db = False
 
     def _load_content(self):
         try:
@@ -43,76 +67,16 @@ class Egr(commands.Cog):
         except:
             return {}
 
-    # ── Storage ──
-
-    async def _init_storage(self):
-        if DATABASE_URL:
-            try:
-                import asyncpg
-                self.pool = await asyncpg.create_pool(DATABASE_URL)
-                async with self.pool.acquire() as conn:
-                    await conn.execute('''
-                        CREATE TABLE IF NOT EXISTS server_settings (
-                            guild_id BIGINT PRIMARY KEY,
-                            city VARCHAR(100) DEFAULT 'Makkah',
-                            country VARCHAR(10) DEFAULT 'SA',
-                            city_name VARCHAR(100) DEFAULT 'مكة المكرمة',
-                            channel_id BIGINT,
-                            active BOOLEAN DEFAULT FALSE
-                        )
-                    ''')
-                self.use_db = True
-                print("[EGR] PostgreSQL connected", flush=True)
-            except Exception as e:
-                print(f"[EGR] PostgreSQL failed, using JSON: {e}", flush=True)
-
-    async def _get_config(self, guild_id):
-        if self.use_db and self.pool:
-            try:
-                async with self.pool.acquire() as conn:
-                    row = await conn.fetchrow('SELECT * FROM server_settings WHERE guild_id = $1', guild_id)
-                    if row:
-                        return dict(row)
-                    await conn.execute('INSERT INTO server_settings (guild_id) VALUES ($1) ON CONFLICT DO NOTHING', guild_id)
-            except:
-                pass
-        data = load_data()
-        return data.get("egr", {}).get(str(guild_id), {})
-
-    async def _save_config(self, guild_id, config):
-        if self.use_db and self.pool:
-            try:
-                async with self.pool.acquire() as conn:
-                    await conn.execute('''
-                        INSERT INTO server_settings (guild_id, city, country, city_name, channel_id, active)
-                        VALUES ($1, $2, $3, $4, $5, $6)
-                        ON CONFLICT (guild_id) DO UPDATE SET
-                            city = $2, country = $3, city_name = $4, channel_id = $5, active = $6
-                    ''', guild_id, config.get("city", "Makkah"), config.get("country", "SA"),
-                       config.get("city_name", "مكة المكرمة"),
-                       config.get("channel_id"), config.get("active", False))
-                return
-            except:
-                pass
-        data = load_data()
-        if "egr" not in data:
-            data["egr"] = {}
-        data["egr"][str(guild_id)] = config
-        save_data(data)
-
-    async def _get_active_configs(self):
-        if self.use_db and self.pool:
-            try:
-                async with self.pool.acquire() as conn:
-                    rows = await conn.fetch('SELECT guild_id, channel_id FROM server_settings WHERE active = TRUE')
-                    return [dict(r) for r in rows]
-            except:
-                pass
-        data = load_data()
-        return [{"guild_id": int(k), "channel_id": v.get("channel_id")}
-                for k, v in data.get("egr", {}).items() if v.get("active") and v.get("channel_id")]
-
-    # ── API ──
+    def _detect_city(self, guild):
+        locale = str(guild.preferred_locale) if guild and guild.preferred_locale else "ar"
+        city = LOCALE_CITY_MAP.get(locale)
+        if city:
+            return city, COUNTRY_OVERRIDES.get(city, "SA")
+        for key in sorted(LOCALE_CITY_MAP.keys(), key=len, reverse=True):
+            if locale.startswith(key[:2]):
+                city = LOCALE_CITY_MAP[key]
+                return city, COUNTRY_OVERRIDES.get(city, "SA")
+        return "Makkah", "SA"
 
     async def _fetch_prayer_times(self, city, country):
         url = f"{PRAYER_API}?city={city}&country={country}&method={PRAYER_METHOD}"
@@ -135,138 +99,50 @@ class Egr(commands.Cog):
             return item.get(field, str(item))
         return item
 
-    # ── Hourly Sender (أدعية وأذكار فقط) ──
-
-    @tasks.loop(hours=1)
-    async def hourly_sender(self):
-        await self.bot.wait_until_ready()
-        active = await self._get_active_configs()
-        for cfg in active:
-            channel = self.bot.get_channel(int(cfg["channel_id"]))
-            if not channel:
-                continue
-
-            pool = []
-            for item in self.content.get("adhkar_morning", []):
-                pool.append(("🌅 أذكار", item))
-            for item in self.content.get("adhkar_evening", []):
-                pool.append(("🌆 أذكار المساء", item))
-            for item in self.content.get("duas", []):
-                pool.append(("🤲 دعاء", item))
-            if not pool:
-                continue
-
-            label, text = random.choice(pool)
-            text = str(text)[:1024]
-
-            embed = discord.Embed(title=label, description=text, color=0x107c41, timestamp=datetime.now(timezone.utc))
-            embed.set_footer(text="🕌 تذكير تلقائي | كل ساعة")
-            try:
-                await channel.send(embed=embed)
-            except:
-                pass
-
-    # ── The ONE Command ──
-
     @commands.command(name="اجر")
-    async def ajr_unified(self, ctx):
-        config = await self._get_config(ctx.guild.id)
-        city = config.get("city", "Makkah")
-        country = config.get("country", "SA")
-        city_name = config.get("city_name", "مكة المكرمة")
-        city_display = f"{city_name} ({city})"
+    async def ajr(self, ctx):
+        guild = ctx.guild
+        city, country = self._detect_city(guild)
 
         await ctx.typing()
 
         timings = await self._fetch_prayer_times(city, country)
-
         ayah_item = self._get_random_item("ayat")
         hadith = self._get_random_item("ahadith")
         dhikr = self._get_random_item("adhkar_morning")
 
-        now = datetime.now(timezone.utc) + timedelta(hours=3)
-        date_str = now.strftime("%Y-%m-%d")
+        locale = str(guild.preferred_locale) if guild and guild.preferred_locale else "ar"
+        locale_display = {"ar": "العربية", "en": "English", "fr": "Français"}.get(locale[:2], locale[:2])
 
         embed = discord.Embed(
             title="🕋 بَوَّابَةُ الأَجْرِ الإِسْلَامِيَّةُ الُموَحَّدَةُ",
-            description="جميع الأذكار والمواقيت والنفحات الإيمانية في شاشة واحدة.",
+            description=f"النفحات الإيمانية والمواقيت الفورية لـ **{city}**",
             color=0x107c41
         )
 
         if timings:
             prayers_text = (
-                f"**المدينة:** {city_display}\n"
+                f"**المدينة:** {city} | **الدولة:** {country}\n"
                 f"• 🌆 الفجر: `{timings.get('Fajr', '---')}` | ☀️ الظهر: `{timings.get('Dhuhr', '---')}`\n"
                 f"• ⛅ العصر: `{timings.get('Asr', '---')}` | 🌅 المغرب: `{timings.get('Maghrib', '---')}`\n"
                 f"• 🌌 العشاء: `{timings.get('Isha', '---')}`"
             )
         else:
-            prayers_text = f"**المدينة:** {city_display}\n⚠️ تعذر جلب أوقات الصلاة"
+            prayers_text = f"⚠️ تعذر جلب مواقيت {city}"
         embed.add_field(name="🕒 مواقيت الصلاة اليوم:", value=prayers_text, inline=False)
 
         if ayah_item:
             embed.add_field(name="📖 آية وتدبر اليوم:",
                             value=f"*{ayah_item['text']}*\n**التفسير:** {ayah_item.get('tafsir', '')}"[:1024],
                             inline=False)
-
         if hadith:
             embed.add_field(name="📚 من مشكاة النبوة (حديث شريف):", value=hadith[:1024], inline=False)
-
         if dhikr:
             embed.add_field(name="📿 ذكر وتذكير الساعة:", value=dhikr[:1024], inline=False)
 
-        active_status = "🟢 مفعل" if config.get("active") else "🔴 غير مفعل"
-        embed.add_field(
-            name="⚙️ الإعدادات",
-            value=f"الإرسال التلقائي: {active_status}\n"
-                  f"`!المدينة [الاسم]` - تغيير المدينة\n"
-                  f"`!تلقائي تشغيل` - تفعيل التذكير الدوري\n"
-                  f"`!تلقائي إيقاف` - إيقاف التذكير الدوري",
-            inline=False
-        )
-        embed.set_footer(text=f"التاريخ: {date_str} | التخزين: {'PostgreSQL' if self.use_db else 'JSON'}")
+        now = datetime.now(timezone.utc) + timedelta(hours=3)
+        embed.set_footer(text=f"تم الكشف التلقائي: {locale_display} | التاريخ: {now.strftime('%Y-%m-%d')}")
         await ctx.send(embed=embed)
-
-    # ── Settings ──
-
-    @commands.command(name="المدينة")
-    async def set_city(self, ctx, *, city_name=None):
-        if not city_name:
-            await ctx.send("❌ اكتب اسم المدينة: `!المدينة مكة` أو `!المدينة القاهرة` أو `!المدينة London`")
-            return
-        config = await self._get_config(ctx.guild.id)
-        config["city"] = city_name
-        config["country"] = "SA"
-        config["city_name"] = city_name
-        await self._save_config(ctx.guild.id, config)
-        await ctx.send(f"✅ تم تعيين المدينة: **{city_name}** 🕌")
-
-    @commands.command(name="تلقائي")
-    async def auto_toggle(self, ctx, *, mode=None):
-        if mode not in ["تشغيل", "إيقاف"]:
-            await ctx.send("❌ استخدم: `!تلقائي تشغيل` أو `!تلقائي إيقاف`")
-            return
-        config = await self._get_config(ctx.guild.id)
-        if mode == "تشغيل":
-            config["active"] = True
-            config["channel_id"] = ctx.channel.id
-            if "city" not in config:
-                config["city"] = "Makkah"
-                config["country"] = "SA"
-                config["city_name"] = "مكة المكرمة"
-            await self._save_config(ctx.guild.id, config)
-            await ctx.send(f"✅ تم تفعيل الإرسال التلقائي في {ctx.channel.mention}")
-        else:
-            config["active"] = False
-            await self._save_config(ctx.guild.id, config)
-            await ctx.send("🔴 تم إيقاف الإرسال التلقائي")
-
-    def cog_unload(self):
-        self.hourly_sender.cancel()
-
-    async def cog_load(self):
-        await self._init_storage()
-        self.hourly_sender.start()
 
 
 async def setup(bot):
