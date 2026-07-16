@@ -497,21 +497,6 @@ async def on_ready():
     except Exception as e:
         print(f"[STARTUP] HackerInvestigateView add_view: {e}", flush=True)
     
-    # Load Cogs (new systems only - no conflicts with main.py)
-    cogs_list = [
-        'cogs.music',
-        'cogs.economy',
-        'cogs.games',
-        'cogs.hacker_bait',
-        'cogs.boost',
-    ]
-    for cog in cogs_list:
-        try:
-            await bot.load_extension(cog)
-            print(f"[COGS] ✅ Loaded: {cog}", flush=True)
-        except Exception as e:
-            print(f"[COGS] ❌ Failed to load {cog}: {e}", flush=True)
-    
     bot.loop.create_task(update_stats())
     bot.loop.create_task(check_dashboard_commands())
     bot.loop.create_task(daily_report())
