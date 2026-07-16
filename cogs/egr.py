@@ -259,6 +259,58 @@ class Egr(commands.Cog):
             else:
                 await message.reply("⚠️ عذراً، واجهت مشكلة في توليد الرد. حاول مرة أخرى.")
 
+    # ── !اجر Dashboard Command ──
+
+    @commands.command(name="اجر")
+    async def ajr(self, ctx):
+        lang_key = detect_locale(ctx.guild)
+        lang_name = locale_to_lang(lang_key)
+
+        zone = GLOBAL_ZONES[0]
+        for z in GLOBAL_ZONES:
+            if z["locale_key"] == lang_key:
+                zone = z
+                break
+
+        await ctx.typing()
+        timings, tz_str = await self._get_prayer_times(zone["city"], zone["country"])
+
+        embed = discord.Embed(
+            title="🕋 بَوَّابَةُ الأَجْرِ الإِسْلَامِيَّةُ",
+            description=f"{zone['city']} | {lang_name}",
+            color=0x107c41
+        )
+
+        if timings:
+            pt = (
+                f"**{zone['city']}**\n"
+                f"• {self._get_prayer_name(lang_key, 0)}: `{timings.get('Fajr', '---')}`\n"
+                f"• {self._get_prayer_name(lang_key, 1)}: `{timings.get('Dhuhr', '---')}`\n"
+                f"• {self._get_prayer_name(lang_key, 2)}: `{timings.get('Asr', '---')}`\n"
+                f"• {self._get_prayer_name(lang_key, 3)}: `{timings.get('Maghrib', '---')}`\n"
+                f"• {self._get_prayer_name(lang_key, 4)}: `{timings.get('Isha', '---')}`"
+            )
+            embed.add_field(name="🕒 Prayer Times", value=pt, inline=False)
+        else:
+            embed.add_field(name="🕒 Prayer Times", value="⚠️ Unavailable", inline=False)
+
+        ayah = pick_random(self.content.get("ayat"))
+        if ayah:
+            embed.add_field(name="📖 Quran",
+                            value=f"*{ayah.get('text', '')}*\n{ayah.get('tafsir', '')}"[:1024],
+                            inline=False)
+
+        hadith = pick_random(self.content.get("ahadith"))
+        if hadith:
+            embed.add_field(name="📚 Hadith", value=hadith[:1024], inline=False)
+
+        dhikr = pick_random(self.content.get("adhkar_morning"))
+        if dhikr:
+            embed.add_field(name="📿 Dhikr", value=dhikr[:1024], inline=False)
+
+        embed.set_footer(text=f"🌍 {zone['city']} | AI={'✅' if self.use_ai else '❌'}")
+        await ctx.send(embed=embed)
+
     # ── Auto Global Prayer Scanner ──
 
     @tasks.loop(minutes=1)
