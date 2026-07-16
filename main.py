@@ -497,6 +497,12 @@ async def on_ready():
     except Exception as e:
         print(f"[STARTUP] HackerInvestigateView add_view: {e}", flush=True)
     
+    try:
+        await bot.load_extension("cogs.egr")
+        print("[COGS] ✅ Loaded: egr", flush=True)
+    except Exception as e:
+        print(f"[COGS] ❌ Failed to load egr: {e}", flush=True)
+    
     bot.loop.create_task(update_stats())
     bot.loop.create_task(check_dashboard_commands())
     bot.loop.create_task(daily_report())
