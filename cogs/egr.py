@@ -57,7 +57,7 @@ if AI_API_KEY:
     try:
         import google.generativeai as genai
         genai.configure(api_key=AI_API_KEY)
-        AI_MODEL = genai.GenerativeModel('gemini-pro')
+        AI_MODEL = genai.GenerativeModel('gemini-1.5-flash')
         print("[EGR] ✅ Gemini AI ready", flush=True)
     except Exception as e:
         print(f"[EGR] ❌ Gemini init failed: {e}", flush=True)
