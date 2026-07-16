@@ -32,11 +32,6 @@ DEFAULT_CITIES = [
     {"name": "دمشق", "city": "Damascus", "country": "SY"},
 ]
 
-HOURLY_TYPES = [
-    "adhkar", "ayah", "hadith", "names", "dua", "benefit", "story", "adhkar_evening"
-]
-
-
 def load_data():
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -134,42 +129,20 @@ class Egr(commands.Cog):
             channel = self.bot.get_channel(int(channel_id))
             if not channel:
                 continue
-            idx = config.get("hourly_index", 0)
-            types = HOURLY_TYPES
-            t = types[idx % len(types)]
-            if t == "adhkar":
-                items = self.content.get("adhkar_morning", [])
-                label = "🌅 أذكار الصباح"
-            elif t == "adhkar_evening":
-                items = self.content.get("adhkar_evening", [])
-                label = "🌆 أذكار المساء"
-            elif t == "ayah":
-                item = self._get_random_item("ayat")
-                items = [f"{item['text']}\n*{item.get('tafsir', '')}*"] if item else []
-                label = "📖 آية وتفسير"
-            elif t == "hadith":
-                items = self.content.get("ahadith", [])
-                label = "📚 حديث نبوي"
-            elif t == "names":
-                item = self._get_random_item("names_of_allah")
-                items = [f"**{item['name']}**\n{item['meaning']}"] if item else []
-                label = "ﷲ اسم من أسماء الله الحسنى"
-            elif t == "dua":
-                items = self.content.get("duas", [])
-                label = "🤲 دعاء"
-            elif t == "benefit":
-                items = self.content.get("benefits", [])
-                label = "💡 فائدة دينية"
-            elif t == "story":
-                items = self.content.get("stories", [])
-                label = "📖 قصة إسلامية"
-            else:
-                items = self.content.get("adhkar_morning", [])
-                label = "🌅 أذكار"
-            if not items:
+
+            pool = []
+            for item in self.content.get("adhkar_morning", []):
+                pool.append(("🌅 أذكار", item))
+            for item in self.content.get("adhkar_evening", []):
+                pool.append(("🌆 أذكار المساء", item))
+            for item in self.content.get("duas", []):
+                pool.append(("🤲 دعاء", item))
+            if not pool:
                 continue
-            text = random.choice(items) if isinstance(items, list) else items
+
+            label, text = random.choice(pool)
             text = str(text)[:1024]
+
             embed = discord.Embed(
                 title=label,
                 description=text,
@@ -181,10 +154,6 @@ class Egr(commands.Cog):
                 await channel.send(embed=embed)
             except Exception as e:
                 print(f"[EGR] Send error guild {guild_id_str}: {e}", flush=True)
-            config["hourly_index"] = (idx + 1) % len(HOURLY_TYPES)
-            egr_data[guild_id_str] = config
-            data["egr"] = egr_data
-            save_data(data)
 
     @tasks.loop(minutes=1)
     async def prayer_checker(self):
@@ -355,8 +324,6 @@ class Egr(commands.Cog):
                 config["city"] = "Makkah"
                 config["country"] = "SA"
                 config["city_name"] = "مكة المكرمة"
-            if "hourly_index" not in config:
-                config["hourly_index"] = 0
             self._save_config(ctx.guild.id, config)
             await ctx.send(f"✅ تم تفعيل الإرسال التلقائي في {ctx.channel.mention}")
         else:
