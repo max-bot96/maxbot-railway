@@ -181,25 +181,6 @@ class Economy(commands.Cog):
         embed.add_field(name="المبلغ", value=f"**{amount:,}** عملة", inline=False)
         await ctx.send(embed=embed)
 
-    @commands.command(name="leaderboard", aliases=["لوحة", "top"])
-    async def leaderboard_cmd(self, ctx):
-        """لوحة المتصدرين"""
-        economy = self._load_economy()
-        guild_data = economy.get(ctx.guild.id, {})
-        sorted_users = sorted(guild_data.items(), key=lambda x: x[1].get("balance", 0) + x[1].get("bank", 0), reverse=True)[:10]
-        if not sorted_users:
-            await ctx.send("❌ لا يوجد بيانات بعد!")
-            return
-        embed = discord.Embed(title="🏆 لوحة المتصدرين", color=0xF1C40F)
-        medals = ["🥇", "🥈", "🥉"]
-        for i, (user_id, data) in enumerate(sorted_users):
-            member = ctx.guild.get_member(user_id)
-            name = member.display_name if member else f"غير معروف ({user_id})"
-            total = data.get("balance", 0) + data.get("bank", 0)
-            prefix = medals[i] if i < 3 else f"**#{i+1}**"
-            embed.add_field(name=f"{prefix} {name}", value=f"**{total:,}** عملة", inline=False)
-        await ctx.send(embed=embed)
-
     @commands.command(name="shop", aliases=["متجر"])
     async def shop_cmd(self, ctx):
         """عرض المتجر"""

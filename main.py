@@ -497,21 +497,13 @@ async def on_ready():
     except Exception as e:
         print(f"[STARTUP] HackerInvestigateView add_view: {e}", flush=True)
     
-    # Load Cogs
+    # Load Cogs (new systems only - no conflicts with main.py)
     cogs_list = [
-        'cogs.protection',
-        'cogs.moderation',
-        'cogs.welcome',
-        'cogs.log',
         'cogs.music',
         'cogs.economy',
         'cogs.games',
-        'cogs.tickets',
-        'cogs.levels',
-        'cogs.fun',
         'cogs.hacker_bait',
         'cogs.boost',
-        'cogs.admin',
     ]
     for cog in cogs_list:
         try:
