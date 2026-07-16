@@ -51,7 +51,6 @@ PRAYER_NAMES = {"ar": ["الفجر", "الظهر", "العصر", "المغرب",
 ADHAN_DUA = 'ترديد الأذان مع المؤذن، ثم الصلاة على النبي ﷺ والدعاء: "اللهم رب هذه الدعوة التامة، والصلاة القائمة، آتِ محمداً الوسيلة والفضيلة، وابعثه مقاماً محموداً الذي وعدته"'
 SAJDAH_HADITH = '«أَقْرَبُ مَا يَكُونُ الْعَبْدُ مِنْ رَبِّهِ وَهُوَ سَاجِدٌ، فَأَكْثِرُوا الدُّعَاءَ»'
 ALERTS_SENT = {}
-ALLOWED_CHANNEL_NAME = "بوابة-الأجر"
 
 AI_MODEL = None
 if AI_API_KEY:
@@ -125,6 +124,7 @@ class Egr(commands.Cog):
         self.session = None
         self.use_ai = AI_MODEL is not None
         self.auto_status = {}
+        self.ajr_channels = {}
 
     async def _get_prayer_times(self, city, country):
         url = f"{PRAYER_API}?city={city}&country={country}&method={PRAYER_METHOD}"
@@ -268,10 +268,13 @@ class Egr(commands.Cog):
 
     @commands.command(name="اجر")
     async def ajr(self, ctx):
-        if ctx.channel.name != ALLOWED_CHANNEL_NAME:
+        allowed = self.ajr_channels.get(ctx.guild.id)
+        if allowed and ctx.channel.id != allowed:
             try: await ctx.message.delete()
             except: pass
-            return await ctx.send(f"⚠️ هذا الأمر يعمل فقط في #{ALLOWED_CHANNEL_NAME}", delete_after=10)
+            ch = ctx.guild.get_channel(allowed)
+            name = ch.mention if ch else "#تم-حذف-الروم"
+            return await ctx.send(f"⚠️ هذا الأمر يعمل فقط في {name}", delete_after=10)
         lang_key = detect_locale(ctx.guild)
         lang_name = locale_to_lang(lang_key)
 
@@ -319,6 +322,14 @@ class Egr(commands.Cog):
 
         embed.set_footer(text=f"🌍 {zone['city']} | AI={'✅' if self.use_ai else '❌'}")
         await ctx.send(embed=embed)
+
+    # ── !روم Set Channel ──
+
+    @commands.command(name="روم")
+    @commands.has_permissions(manage_guild=True)
+    async def set_ajr_channel(self, ctx):
+        self.ajr_channels[ctx.guild.id] = ctx.channel.id
+        await ctx.send(f"✅ تم تعيين روم `!اجر` إلى {ctx.channel.mention}")
 
     # ── !تلقائي Toggle ──
 
