@@ -10,6 +10,7 @@ from datetime import datetime, timezone, timedelta
 DATA_FILE = "bot_data.json"
 PRAYER_API = "https://api.aladhan.com/v1/timingsByCity"
 PRAYER_METHOD = 4
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 ADHAN_DUA = 'ترديد الأذان مع المؤذن، ثم الصلاة على النبي ﷺ والدعاء: "اللهم رب هذه الدعوة التامة، والصلاة القائمة، آتِ محمداً الوسيلة والفضيلة، وابعثه مقاماً محموداً الذي وعدته"'
 SAJDAH_HADITH = '«أَقْرَبُ مَا يَكُونُ الْعَبْدُ مِنْ رَبِّهِ وَهُوَ سَاجِدٌ، فَأَكْثِرُوا الدُّعَاءَ»'
@@ -32,13 +33,14 @@ DEFAULT_CITIES = [
     {"name": "دمشق", "city": "Damascus", "country": "SY"},
 ]
 
+# ── JSON Helpers (fallback when no DATABASE_URL) ──
+
 def load_data():
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
-
 
 def save_data(data):
     try:
@@ -53,9 +55,10 @@ class Egr(commands.Cog):
         self.bot = bot
         self.content = self._load_content()
         self.prayer_cache = {}
-        self.hourly_index = 0
         self.last_prayers_sent = {}
         self.session = None
+        self.pool = None
+        self.use_db = False
 
     def _load_content(self):
         try:
@@ -66,16 +69,93 @@ class Egr(commands.Cog):
             print(f"[EGR] Content load error: {e}", flush=True)
             return {}
 
-    def _get_config(self, guild_id):
+    # ── Storage Abstraction ──
+
+    async def _init_storage(self):
+        if DATABASE_URL:
+            try:
+                import asyncpg
+                self.pool = await asyncpg.create_pool(DATABASE_URL)
+                async with self.pool.acquire() as conn:
+                    await conn.execute('''
+                        CREATE TABLE IF NOT EXISTS server_settings (
+                            guild_id BIGINT PRIMARY KEY,
+                            city VARCHAR(100) DEFAULT 'Makkah',
+                            country VARCHAR(10) DEFAULT 'SA',
+                            city_name VARCHAR(100) DEFAULT 'مكة المكرمة',
+                            channel_id BIGINT,
+                            active BOOLEAN DEFAULT FALSE
+                        )
+                    ''')
+                self.use_db = True
+                print("[EGR] PostgreSQL connected and ready", flush=True)
+            except Exception as e:
+                print(f"[EGR] PostgreSQL init failed, using JSON: {e}", flush=True)
+                self.use_db = False
+        else:
+            print("[EGR] No DATABASE_URL, using JSON storage", flush=True)
+            self.use_db = False
+
+    async def _get_config(self, guild_id):
+        if self.use_db and self.pool:
+            try:
+                async with self.pool.acquire() as conn:
+                    row = await conn.fetchrow(
+                        'SELECT * FROM server_settings WHERE guild_id = $1', guild_id
+                    )
+                    if row:
+                        return dict(row)
+                    await conn.execute(
+                        'INSERT INTO server_settings (guild_id) VALUES ($1) ON CONFLICT (guild_id) DO NOTHING',
+                        guild_id
+                    )
+                    return {"guild_id": guild_id, "city": "Makkah", "country": "SA",
+                            "city_name": "مكة المكرمة", "channel_id": None, "active": False}
+            except Exception as e:
+                print(f"[EGR] DB read error: {e}", flush=True)
         data = load_data()
         return data.get("egr", {}).get(str(guild_id), {})
 
-    def _save_config(self, guild_id, config):
+    async def _save_config(self, guild_id, config):
+        if self.use_db and self.pool:
+            try:
+                async with self.pool.acquire() as conn:
+                    await conn.execute('''
+                        INSERT INTO server_settings (guild_id, city, country, city_name, channel_id, active)
+                        VALUES ($1, $2, $3, $4, $5, $6)
+                        ON CONFLICT (guild_id) DO UPDATE SET
+                            city = $2, country = $3, city_name = $4, channel_id = $5, active = $6
+                    ''', guild_id, config.get("city", "Makkah"), config.get("country", "SA"),
+                       config.get("city_name", "مكة المكرمة"),
+                       config.get("channel_id"), config.get("active", False))
+                return
+            except Exception as e:
+                print(f"[EGR] DB write error: {e}, falling back to JSON", flush=True)
         data = load_data()
         if "egr" not in data:
             data["egr"] = {}
         data["egr"][str(guild_id)] = config
         save_data(data)
+
+    async def _get_all_active_configs(self):
+        if self.use_db and self.pool:
+            try:
+                async with self.pool.acquire() as conn:
+                    rows = await conn.fetch(
+                        'SELECT guild_id, channel_id, active, city, country, city_name FROM server_settings WHERE active = TRUE'
+                    )
+                    return [dict(r) for r in rows]
+            except Exception as e:
+                print(f"[EGR] DB fetch active error: {e}", flush=True)
+        data = load_data()
+        result = []
+        for gid_str, cfg in data.get("egr", {}).items():
+            if cfg.get("active") and cfg.get("channel_id"):
+                cfg["guild_id"] = int(gid_str)
+                result.append(cfg)
+        return result
+
+    # ── Prayer Times ──
 
     async def _fetch_prayer_times(self, city, country):
         url = f"{PRAYER_API}?city={city}&country={country}&method={PRAYER_METHOD}"
@@ -115,15 +195,13 @@ class Egr(commands.Cog):
         return item
 
     # ── Background Tasks ──
+
     @tasks.loop(hours=1)
     async def hourly_sender(self):
         await self.bot.wait_until_ready()
-        data = load_data()
-        egr_data = data.get("egr", {})
-        for guild_id_str, config in egr_data.items():
-            if not config.get("active", False):
-                continue
-            channel_id = config.get("channel_id")
+        active_configs = await self._get_all_active_configs()
+        for cfg in active_configs:
+            channel_id = cfg.get("channel_id")
             if not channel_id:
                 continue
             channel = self.bot.get_channel(int(channel_id))
@@ -153,7 +231,7 @@ class Egr(commands.Cog):
             try:
                 await channel.send(embed=embed)
             except Exception as e:
-                print(f"[EGR] Send error guild {guild_id_str}: {e}", flush=True)
+                print(f"[EGR] Send error channel {channel_id}: {e}", flush=True)
 
     @tasks.loop(minutes=1)
     async def prayer_checker(self):
@@ -165,18 +243,15 @@ class Egr(commands.Cog):
             await self.update_all_prayer_times()
         if not self.prayer_cache:
             await self.update_all_prayer_times()
-        data = load_data()
-        egr_data = data.get("egr", {})
-        for guild_id_str, config in egr_data.items():
-            if not config.get("active", False):
-                continue
-            channel_id = config.get("channel_id")
+        active_configs = await self._get_all_active_configs()
+        for cfg in active_configs:
+            channel_id = cfg.get("channel_id")
             if not channel_id:
                 continue
             channel = self.bot.get_channel(int(channel_id))
             if not channel:
                 continue
-            guild = self.bot.get_guild(int(guild_id_str))
+            guild = self.bot.get_guild(int(cfg["guild_id"]))
             if not guild:
                 continue
             for loc_name, timings in self.prayer_cache.items():
@@ -192,7 +267,7 @@ class Egr(commands.Cog):
                     p_hour, p_min = int(parts[0]), int(parts[1])
                     if current_hour == p_hour and current_min == p_min:
                         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-                        send_key = f"{guild_id_str}_{loc_name}_{prayer_key}_{today}"
+                        send_key = f"{cfg['guild_id']}_{loc_name}_{prayer_key}_{today}"
                         if self.last_prayers_sent.get(send_key):
                             continue
                         self.last_prayers_sent[send_key] = True
@@ -231,9 +306,10 @@ class Egr(commands.Cog):
             print(f"[EGR] Prayer send error: {e}", flush=True)
 
     # ── The ONE Command ──
+
     @commands.command(name="اجر")
     async def ajr_unified(self, ctx):
-        config = self._get_config(ctx.guild.id)
+        config = await self._get_config(ctx.guild.id)
         city = config.get("city", "Makkah")
         country = config.get("country", "SA")
         city_name = config.get("city_name", "مكة المكرمة")
@@ -279,6 +355,7 @@ class Egr(commands.Cog):
             embed.add_field(name="📿 ذكر وتذكير الساعة:", value=dhikr[:1024], inline=False)
 
         active_status = "🟢 مفعل" if config.get("active") else "🔴 غير مفعل"
+        db_status = "PostgreSQL" if self.use_db else "JSON"
         embed.add_field(
             name="⚙️ الإعدادات",
             value=f"الإرسال التلقائي: {active_status}\n"
@@ -288,10 +365,11 @@ class Egr(commands.Cog):
             inline=False
         )
 
-        embed.set_footer(text=f"تاريخ العرض: {today_str} | البوت يعمل بنظام الجدولة الآلية كل ساعة وعند كل صلاة.")
+        embed.set_footer(text=f"تاريخ العرض: {today_str} | التخزين: {db_status}")
         await ctx.send(embed=embed)
 
     # ── Settings Commands ──
+
     @commands.command(name="المدينة")
     async def set_city(self, ctx, *, city_name=None):
         if not city_name:
@@ -304,11 +382,11 @@ class Egr(commands.Cog):
             await ctx.send(f"❌ المدينة غير موجودة. المدن المتاحة:\n{names}")
             return
         loc = valid[0]
-        config = self._get_config(ctx.guild.id)
+        config = await self._get_config(ctx.guild.id)
         config["city"] = loc["city"]
         config["country"] = loc["country"]
         config["city_name"] = loc["name"]
-        self._save_config(ctx.guild.id, config)
+        await self._save_config(ctx.guild.id, config)
         await ctx.send(f"✅ تم تعيين المدينة: **{loc['name']}**")
 
     @commands.command(name="تلقائي")
@@ -316,7 +394,7 @@ class Egr(commands.Cog):
         if mode not in ["تشغيل", "إيقاف"]:
             await ctx.send("❌ استخدم: `!تلقائي تشغيل` أو `!تلقائي إيقاف`")
             return
-        config = self._get_config(ctx.guild.id)
+        config = await self._get_config(ctx.guild.id)
         if mode == "تشغيل":
             config["active"] = True
             config["channel_id"] = ctx.channel.id
@@ -324,11 +402,11 @@ class Egr(commands.Cog):
                 config["city"] = "Makkah"
                 config["country"] = "SA"
                 config["city_name"] = "مكة المكرمة"
-            self._save_config(ctx.guild.id, config)
+            await self._save_config(ctx.guild.id, config)
             await ctx.send(f"✅ تم تفعيل الإرسال التلقائي في {ctx.channel.mention}")
         else:
             config["active"] = False
-            self._save_config(ctx.guild.id, config)
+            await self._save_config(ctx.guild.id, config)
             await ctx.send("🔴 تم إيقاف الإرسال التلقائي")
 
     @tasks.loop(hours=24)
@@ -341,6 +419,7 @@ class Egr(commands.Cog):
         self.daily_prayer_update.cancel()
 
     async def cog_load(self):
+        await self._init_storage()
         self.hourly_sender.start()
         self.prayer_checker.start()
         self.daily_prayer_update.start()

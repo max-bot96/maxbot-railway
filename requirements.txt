@@ -7,3 +7,4 @@ gunicorn==23.0.0
 cloudscraper==1.2.71
 yt-dlp
 imageio-ffmpeg
+asyncpg==0.30.0
