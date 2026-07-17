@@ -181,9 +181,10 @@ class Egr(commands.Cog):
             async with self.session.get(url, timeout=10) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    t = data.get("data", {}).get("timings", {})
-                    tz = data.get("data", {}).get("meta", {}).get("timezone", "UTC")
-                    return t, tz
+                    if data.get("code") == 200:
+                        t = data.get("data", {}).get("timings", {})
+                        tz = data.get("data", {}).get("meta", {}).get("timezone", "UTC")
+                        return t, tz
         except:
             pass
         return None, None
@@ -360,7 +361,16 @@ class Egr(commands.Cog):
                 )
                 embed.add_field(name="🕒 Prayer Times", value=pt, inline=False)
             else:
-                embed.add_field(name="🕒 Prayer Times", value="⚠️ Unavailable", inline=False)
+                ft = {"Fajr": "04:30", "Dhuhr": "12:25", "Asr": "15:45", "Maghrib": "19:05", "Isha": "20:35"}
+                pt = (
+                    f"**{zone['city']}** (تقديرية)\n"
+                    f"• {self._get_prayer_name(lang_key, 0)}: `{ft['Fajr']}`\n"
+                    f"• {self._get_prayer_name(lang_key, 1)}: `{ft['Dhuhr']}`\n"
+                    f"• {self._get_prayer_name(lang_key, 2)}: `{ft['Asr']}`\n"
+                    f"• {self._get_prayer_name(lang_key, 3)}: `{ft['Maghrib']}`\n"
+                    f"• {self._get_prayer_name(lang_key, 4)}: `{ft['Isha']}`"
+                )
+                embed.add_field(name="🕒 Prayer Times", value=pt, inline=False)
 
             ayah = pick_random(self.content.get("ayat"))
             if ayah:
