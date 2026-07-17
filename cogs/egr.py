@@ -11,6 +11,7 @@ from datetime import datetime
 PRAYER_API = "https://api.aladhan.com/v1/timingsByCity"
 PRAYER_METHOD = 4
 AI_API_KEY = os.getenv("AI_API_KEY")
+ALLOWED_CHANNEL_NAME = "بوابة-الأجر"
 
 GLOBAL_ZONES = [
     {"city": "Makkah", "country": "SA", "zone": "Asia/Riyadh", "locale_key": "ar"},
@@ -50,6 +51,23 @@ PRAYER_NAMES = {"ar": ["الفجر", "الظهر", "العصر", "المغرب",
 
 ADHAN_DUA = 'ترديد الأذان مع المؤذن، ثم الصلاة على النبي ﷺ والدعاء: "اللهم رب هذه الدعوة التامة، والصلاة القائمة، آتِ محمداً الوسيلة والفضيلة، وابعثه مقاماً محموداً الذي وعدته"'
 SAJDAH_HADITH = '«أَقْرَبُ مَا يَكُونُ الْعَبْدُ مِنْ رَبِّهِ وَهُوَ سَاجِدٌ، فَأَكْثِرُوا الدُّعَاءَ»'
+
+ADHAN_ALERTS = {
+    "ar": "📢 @everyone | حان الآن موعد أذان صلاة **{prayer}** في **{city}** 🕋",
+    "en": "📢 @everyone | It is now time for **{prayer}** prayer in **{city}** 🕋",
+    "tr": "📢 @everyone | **{city}** için **{prayer}** vakti geldi 🕋",
+    "fr": "📢 @everyone | C'est l'heure de la prière **{prayer}** à **{city}** 🕋",
+    "id": "📢 @everyone | Waktunya shalat **{prayer}** di **{city}** 🕋",
+    "ru": "📢 @everyone | Настало время молитвы **{prayer}** в **{city}** 🕋",
+    "ur": "📢 @everyone | **{city}** میں **{prayer}** کا وقت ہوگیا 🕋",
+    "fa": "📢 @everyone | وقت نماز **{prayer}** در **{city}** فرا رسید 🕋",
+    "ms": "📢 @everyone | Waktu solat **{prayer}** di **{city}** 🕋",
+    "bn": "📢 @everyone | **{city}** এ **{prayer}** এর সময় হয়েছে 🕋",
+    "ja": "📢 @everyone | **{city}** で **{prayer}** の時間です 🕋",
+    "pt": "📢 @everyone | É hora da oração **{prayer}** em **{city}** 🕋",
+    "de": "📢 @everyone | Es ist Zeit für das **{prayer}**-Gebet in **{city}** 🕋",
+}
+
 ALERTS_SENT = {}
 
 AI_MODEL = None
@@ -117,6 +135,16 @@ def find_best_channel(guild):
     return None
 
 
+def fallback_channel(guild):
+    ch = discord.utils.get(guild.text_channels, name=ALLOWED_CHANNEL_NAME)
+    if ch:
+        return ch
+    ch = guild.system_channel
+    if ch and ch.permissions_for(guild.me).send_messages:
+        return ch
+    return find_best_channel(guild)
+
+
 class Egr(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -156,7 +184,9 @@ class Egr(commands.Cog):
                 continue
             channel = guild.get_channel(gs["channel_id"])
             if not channel:
-                continue
+                channel = fallback_channel(guild)
+                if not channel:
+                    continue
 
             lang_key = detect_locale(guild)
             lang_name = locale_to_lang(lang_key)
@@ -269,12 +299,18 @@ class Egr(commands.Cog):
     @commands.command(name="اجر")
     async def ajr(self, ctx):
         allowed = self.ajr_channels.get(ctx.guild.id)
-        if allowed and ctx.channel.id != allowed:
+        if allowed:
+            if ctx.channel.id != allowed:
+                try: await ctx.message.delete()
+                except: pass
+                ch = ctx.guild.get_channel(allowed)
+                name = ch.mention if ch else "#تم-حذف-الروم"
+                return await ctx.send(f"⚠️ هذا الأمر يعمل فقط في {name}", delete_after=10)
+        elif ctx.channel.name != ALLOWED_CHANNEL_NAME:
             try: await ctx.message.delete()
             except: pass
-            ch = ctx.guild.get_channel(allowed)
-            name = ch.mention if ch else "#تم-حذف-الروم"
-            return await ctx.send(f"⚠️ هذا الأمر يعمل فقط في {name}", delete_after=10)
+            return await ctx.send(f"⚠️ هذا الأمر يعمل فقط في #{ALLOWED_CHANNEL_NAME}", delete_after=10)
+
         lang_key = detect_locale(ctx.guild)
         lang_name = locale_to_lang(lang_key)
 
@@ -375,6 +411,9 @@ class Egr(commands.Cog):
 
                 lang_key = zone["locale_key"]
                 prayer_label = self._get_prayer_name(lang_key, i)
+                alert_text = ADHAN_ALERTS.get(lang_key, ADHAN_ALERTS["en"]).format(
+                    prayer=prayer_label, city=zone["city"]
+                )
 
                 embed = discord.Embed(
                     title=f"🕌 {prayer_label} - {zone['city']}",
@@ -393,10 +432,12 @@ class Egr(commands.Cog):
                         continue
                     channel = guild.get_channel(gs["channel_id"])
                     if not channel:
-                        continue
+                        channel = fallback_channel(guild)
+                        if not channel:
+                            continue
                     try:
                         await channel.send(
-                            content=f"📢 @everyone | **{prayer_label}** - {zone['city']} 🕌",
+                            content=alert_text,
                             embed=embed,
                             allowed_mentions=discord.AllowedMentions(everyone=True)
                         )
