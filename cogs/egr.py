@@ -69,6 +69,7 @@ ADHAN_ALERTS = {
 }
 
 ALERTS_SENT = {}
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "bot_config.json")
 
 AI_MODEL = None
 if AI_API_KEY:
@@ -151,8 +152,26 @@ class Egr(commands.Cog):
         self.content = load_content()
         self.session = None
         self.use_ai = AI_MODEL is not None
-        self.auto_status = {}
+        self.auto_status = self._load_auto_status()
         self.ajr_channels = {}
+
+    def _load_auto_status(self):
+        if os.path.exists(CONFIG_PATH):
+            try:
+                with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                return {int(k): v for k, v in data.items()}
+            except Exception as e:
+                print(f"[EGR] Config load error: {e}", flush=True)
+        return {}
+
+    def _save_auto_status(self):
+        try:
+            os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
+            with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+                json.dump(self.auto_status, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"[EGR] Config save error: {e}", flush=True)
 
     async def _get_prayer_times(self, city, country):
         url = f"{PRAYER_API}?city={city}&country={country}&method={PRAYER_METHOD}"
@@ -374,10 +393,12 @@ class Egr(commands.Cog):
     async def toggle_auto(self, ctx, status: str):
         if status == "تشغيل":
             self.auto_status[ctx.guild.id] = {"channel_id": ctx.channel.id, "active": True}
-            await ctx.send("⚙️ تم **تفعيل** الإرسال التلقائي (الأذكار والصلوات) في هذه القناة.")
+            self._save_auto_status()
+            await ctx.send("⚙️ تم **تفعيل** الإرسال التلقائي (الأذكار والصلوات) في هذه القناة وحفظ الإعدادات.")
         else:
             self.auto_status[ctx.guild.id] = {"channel_id": ctx.channel.id, "active": False}
-            await ctx.send("⚙️ تم **إيقاف** الإرسال التلقائي في هذا السيرفر.")
+            self._save_auto_status()
+            await ctx.send("⚙️ تم **إيقاف** الإرسال التلقائي في هذا السيرفر وحفظ الإعدادات.")
 
     # ── Auto Global Prayer Scanner ──
 
