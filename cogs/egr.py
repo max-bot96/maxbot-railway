@@ -376,7 +376,21 @@ class Egr(commands.Cog):
             embed.add_field(name="📿 Dhikr", value=dhikr[:1024], inline=False)
 
         embed.set_footer(text=f"🌍 {zone['city']} | AI={'✅' if self.use_ai else '❌'}")
-        await ctx.send(embed=embed)
+        try:
+            await ctx.send(embed=embed)
+        except discord.DiscordServerError:
+            await asyncio.sleep(2)
+            try:
+                await ctx.send(embed=embed)
+            except:
+                pass
+        except:
+            pass
+
+    @ajr.error
+    async def ajr_error(self, ctx, error):
+        if isinstance(error, commands.CommandInvokeError):
+            await ctx.send("⚠️ سيرفرات ديسكورد تواجه بطئاً مؤقتاً، حاول مرة أخرى.", delete_after=5)
 
     # ── !روم Set Channel ──
 
