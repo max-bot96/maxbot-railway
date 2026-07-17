@@ -317,80 +317,73 @@ class Egr(commands.Cog):
 
     @commands.command(name="اجر")
     async def ajr(self, ctx):
-        allowed = self.ajr_channels.get(ctx.guild.id)
-        if allowed:
-            if ctx.channel.id != allowed:
+        try:
+            allowed = self.ajr_channels.get(ctx.guild.id)
+            if allowed:
+                if ctx.channel.id != allowed:
+                    try: await ctx.message.delete()
+                    except: pass
+                    ch = ctx.guild.get_channel(allowed)
+                    name = ch.mention if ch else "#تم-حذف-الروم"
+                    return await ctx.send(f"⚠️ هذا الأمر يعمل فقط في {name}", delete_after=10)
+            elif ctx.channel.name != ALLOWED_CHANNEL_NAME:
                 try: await ctx.message.delete()
                 except: pass
-                ch = ctx.guild.get_channel(allowed)
-                name = ch.mention if ch else "#تم-حذف-الروم"
-                return await ctx.send(f"⚠️ هذا الأمر يعمل فقط في {name}", delete_after=10)
-        elif ctx.channel.name != ALLOWED_CHANNEL_NAME:
-            try: await ctx.message.delete()
-            except: pass
-            return await ctx.send(f"⚠️ هذا الأمر يعمل فقط في #{ALLOWED_CHANNEL_NAME}", delete_after=10)
+                return await ctx.send(f"⚠️ هذا الأمر يعمل فقط في #{ALLOWED_CHANNEL_NAME}", delete_after=10)
 
-        lang_key = detect_locale(ctx.guild)
-        lang_name = locale_to_lang(lang_key)
+            lang_key = detect_locale(ctx.guild)
+            lang_name = locale_to_lang(lang_key)
 
-        zone = GLOBAL_ZONES[0]
-        for z in GLOBAL_ZONES:
-            if z["locale_key"] == lang_key:
-                zone = z
-                break
+            zone = GLOBAL_ZONES[0]
+            for z in GLOBAL_ZONES:
+                if z["locale_key"] == lang_key:
+                    zone = z
+                    break
 
-        await ctx.typing()
-        timings, tz_str = await self._get_prayer_times(zone["city"], zone["country"])
+            await ctx.typing()
+            timings, tz_str = await self._get_prayer_times(zone["city"], zone["country"])
 
-        embed = discord.Embed(
-            title="🕋 بَوَّابَةُ الأَجْرِ الإِسْلَامِيَّةُ",
-            description=f"{zone['city']} | {lang_name}",
-            color=0x107c41
-        )
-
-        if timings:
-            pt = (
-                f"**{zone['city']}**\n"
-                f"• {self._get_prayer_name(lang_key, 0)}: `{timings.get('Fajr', '---')}`\n"
-                f"• {self._get_prayer_name(lang_key, 1)}: `{timings.get('Dhuhr', '---')}`\n"
-                f"• {self._get_prayer_name(lang_key, 2)}: `{timings.get('Asr', '---')}`\n"
-                f"• {self._get_prayer_name(lang_key, 3)}: `{timings.get('Maghrib', '---')}`\n"
-                f"• {self._get_prayer_name(lang_key, 4)}: `{timings.get('Isha', '---')}`"
+            embed = discord.Embed(
+                title="🕋 بَوَّابَةُ الأَجْرِ الإِسْلَامِيَّةُ",
+                description=f"{zone['city']} | {lang_name}",
+                color=0x107c41
             )
-            embed.add_field(name="🕒 Prayer Times", value=pt, inline=False)
-        else:
-            embed.add_field(name="🕒 Prayer Times", value="⚠️ Unavailable", inline=False)
 
-        ayah = pick_random(self.content.get("ayat"))
-        if ayah:
-            embed.add_field(name="📖 Quran",
-                            value=f"*{ayah.get('text', '')}*\n{ayah.get('tafsir', '')}"[:1024],
-                            inline=False)
+            if timings:
+                pt = (
+                    f"**{zone['city']}**\n"
+                    f"• {self._get_prayer_name(lang_key, 0)}: `{timings.get('Fajr', '---')}`\n"
+                    f"• {self._get_prayer_name(lang_key, 1)}: `{timings.get('Dhuhr', '---')}`\n"
+                    f"• {self._get_prayer_name(lang_key, 2)}: `{timings.get('Asr', '---')}`\n"
+                    f"• {self._get_prayer_name(lang_key, 3)}: `{timings.get('Maghrib', '---')}`\n"
+                    f"• {self._get_prayer_name(lang_key, 4)}: `{timings.get('Isha', '---')}`"
+                )
+                embed.add_field(name="🕒 Prayer Times", value=pt, inline=False)
+            else:
+                embed.add_field(name="🕒 Prayer Times", value="⚠️ Unavailable", inline=False)
 
-        hadith = pick_random(self.content.get("ahadith"))
-        if hadith:
-            embed.add_field(name="📚 Hadith", value=hadith[:1024], inline=False)
+            ayah = pick_random(self.content.get("ayat"))
+            if ayah:
+                embed.add_field(name="📖 Quran",
+                                value=f"*{ayah.get('text', '')}*\n{ayah.get('tafsir', '')}"[:1024],
+                                inline=False)
 
-        dhikr = pick_random(self.content.get("adhkar_morning"))
-        if dhikr:
-            embed.add_field(name="📿 Dhikr", value=dhikr[:1024], inline=False)
+            hadith = pick_random(self.content.get("ahadith"))
+            if hadith:
+                embed.add_field(name="📚 Hadith", value=hadith[:1024], inline=False)
 
-        embed.set_footer(text=f"🌍 {zone['city']} | AI={'✅' if self.use_ai else '❌'}")
-        try:
-            await ctx.send(embed=embed)
-        except discord.DiscordServerError:
-            await asyncio.sleep(2)
+            dhikr = pick_random(self.content.get("adhkar_morning"))
+            if dhikr:
+                embed.add_field(name="📿 Dhikr", value=dhikr[:1024], inline=False)
+
+            embed.set_footer(text=f"🌍 {zone['city']} | AI={'✅' if self.use_ai else '❌'}")
             try:
                 await ctx.send(embed=embed)
-            except:
-                pass
+            except discord.HTTPException:
+                await asyncio.sleep(2)
+                await ctx.send("⚠️ عذراً، سيرفرات ديسكورد تواجه عطلاً مؤقتاً. حاول مرة أخرى.", delete_after=10)
         except:
-            pass
-
-    @ajr.error
-    async def ajr_error(self, ctx, error):
-        if isinstance(error, commands.CommandInvokeError):
-            await ctx.send("⚠️ سيرفرات ديسكورد تواجه بطئاً مؤقتاً، حاول مرة أخرى.", delete_after=5)
+            await ctx.send("⚠️ حدث خطأ مؤقت. حاول مرة أخرى.", delete_after=10)
 
     # ── !روم Set Channel ──
 
