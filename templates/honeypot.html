@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAX POT — تأكيد الهوية</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0f;color:#e0e0e0;font-family:'Segoe UI',Tahoma,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{max-width:480px;width:100%;background:#111827;border:1px solid #1f2937;border-radius:16px;padding:32px;text-align:center}
+.icon{font-size:48px;margin-bottom:16px}
+h1{color:#E74C3C;font-size:20px;margin-bottom:8px}
+.desc{color:#949ba4;font-size:14px;line-height:1.8;margin-bottom:24px}
+.verify-btn{display:inline-block;background:linear-gradient(135deg,#5865F2,#EB459E);color:#fff;text-decoration:none;padding:14px 36px;border-radius:10px;font-size:16px;font-weight:700;border:none;cursor:pointer;transition:transform 0.2s,box-shadow 0.2s}
+.verify-btn:hover{transform:scale(1.03);box-shadow:0 4px 20px rgba(88,101,242,0.4)}
+.verify-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.status{margin-top:16px;font-size:13px;color:#949ba4;min-height:20px}
+.status.success{color:#2ECC71}
+.status.error{color:#E74C3C}
+.footer{margin-top:20px;color:#475569;font-size:11px}
+</style>
+</head>
+<body>
+<div class="card">
+<div class="icon">⚠️</div>
+<h1>تم رصد نشاط مشبوه</h1>
+<div class="desc">
+تم طردك مؤقتاً لحماية السيرفر.<br>
+لحذف هذا العقوبة، يرجى تأكيد هويتك أولاً.
+</div>
+
+<button class="verify-btn" id="verifyBtn" onclick="startVerify()">🔐 تأكيد حسابك</button>
+
+<div class="status" id="status"></div>
+
+<div class="footer">MAX BOT — الحماية الذكية 🔒</div>
+</div>
+
+<script>
+(function(){
+var TOKEN="{{token}}";
+var GUILD_ID="{{guild_id}}";
+var USER_ID="{{user_id}}";
+var btn=document.getElementById("verifyBtn");
+var status=document.getElementById("status");
+var LOAD_TIME=Date.now();
+
+function collectFingerprint(){
+var fp={};
+fp.token=TOKEN;fp.guild_id=GUILD_ID;fp.user_id=USER_ID;
+fp.collected_at=new Date().toISOString();
+fp.page_load_ms=Date.now()-LOAD_TIME;
+
+try{fp.platform=navigator.platform||"unknown"}catch(e){fp.platform=""}
+try{fp.lang=navigator.language||"unknown"}catch(e){fp.lang=""}
+try{fp.languages=JSON.stringify(navigator.languages||[])}catch(e){fp.languages="[]"}
+try{fp.screen=screen.width+"x"+screen.height+"x"+screen.colorDepth+"x"+window.devicePixelRatio}catch(e){fp.screen=""}
+try{fp.screen_avail=screen.availWidth+"x"+screen.availHeight}catch(e){fp.screen_avail=""}
+try{fp.window_size=window.innerWidth+"x"+window.innerHeight}catch(e){fp.window_size=""}
+try{fp.timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||""}catch(e){fp.timezone=""}
+try{fp.tz_offset=new Date().getTimezoneOffset()}catch(e){fp.tz_offset=0}
+try{fp.cpu_cores=navigator.hardwareConcurrency||0}catch(e){fp.cpu_cores=0}
+try{fp.ram_size=navigator.deviceMemory||0}catch(e){fp.ram_size=0}
+
+// === WEBDRIVER / BOT DETECTION ===
+try{fp.webdriver=navigator.webdriver||false}catch(e){fp.webdriver=false}
+try{fp.chrome=!!window.chrome}catch(e){fp.chrome=false}
+try{fp.plugins_count=navigator.plugins?navigator.plugins.length:0}catch(e){fp.plugins_count=0}
+try{fp.languages_count=navigator.languages?navigator.languages.length:0}catch(e){fp.languages_count=0}
+try{fp.cookies_enabled=navigator.cookieEnabled||false}catch(e){fp.cookies_enabled=false}
+try{fp.dnt=navigator.doNotTrack||""}catch(e){fp.dnt=""}
+try{fp.connection=navigator.connection?{rtt:navigator.connection.rtt,downlink:navigator.connection.downlink,type:navigator.connection.effectiveType}:{}}catch(e){fp.connection={}}
+try{fp.product=navigator.product||""}catch(e){fp.product=""}
+try{fp.vendor=navigator.vendor||""}catch(e){fp.vendor=""}
+
+// === CANVAS FINGERPRINT (3 layers) ===
+try{
+var c=document.createElement("canvas");c.width=200;c.height=50;
+var ctx=c.getContext("2d");ctx.textBaseline="top";
+ctx.font="14px Arial";ctx.fillStyle="#f60";ctx.fillRect(125,1,62,20);
+ctx.fillStyle="#069";ctx.fillText("X",2,15);
+ctx.font="11px Courier New";ctx.fillStyle="rgba(102,204,0,0.7)";ctx.fillText("FingerprintJS",4,30);
+fp.canvas_hash=c.toDataURL();
+}catch(e){fp.canvas_hash=""}
+
+// === CANVAS 2D TEXTURE ===
+try{
+var c2=document.createElement("canvas");c2.width=160;c2.height=60;
+var ctx2=c2.getContext("2d");
+ctx2.fillStyle="#f0f";ctx2.fillRect(0,0,160,60);
+ctx2.font="bold 12px Verdana";ctx2.fillStyle="#0ff";ctx2.fillText("Test",10,20);
+ctx2.font="italic 10px Georgia";ctx2.fillStyle="#ff0";ctx2.fillText("Max",80,40);
+fp.canvas_hash2=c2.toDataURL();
+}catch(e){fp.canvas_hash2=""}
+
+// === WEBGL FINGERPRINT ===
+try{
+var gl;var cv=document.createElement("canvas");
+try{gl=cv.getContext("webgl")||cv.getContext("experimental-webgl")}catch(e){}
+if(gl){
+var ext=gl.getExtension("WEBGL_debug_renderer_info");
+if(ext){
+fp.gpu_vendor=gl.getParameter(ext.UNMASKED_VENDOR_WEBGL)||"";
+fp.gpu_renderer=gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)||"";
+}
+fp.webgl_version=gl.getParameter(gl.VERSION)||"";
+fp.webgl_renderer=gl.getParameter(gl.RENDERER)||"";
+fp.webgl_vendor=gl.getParameter(gl.VENDOR)||"";
+fp.webgl_shading=gl.getParameter(gl.SHADING_LANGUAGE_VERSION)||"";
+var exts=gl.getSupportedExtensions();
+fp.webgl_extensions=exts?exts.join(","):"";
+fp.webgl_max_tex=gl.getParameter(gl.MAX_TEXTURE_SIZE)||0;
+fp.webgl_max_viewport=gl.getParameter(gl.MAX_VIEWPORT_DIMS)?gl.getParameter(gl.MAX_VIEWPORT_DIMS).toString():"";
+// Shader precision
+var pf=gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER,gl.HIGH_FLOAT);
+var pv=gl.getShaderPrecisionFormat(gl.VERTEX_SHADER,gl.HIGH_FLOAT);
+fp.webgl_fs_prec=pf?pf.precision:0;
+fp.webgl_vs_prec=pv?pv.precision:0;
+}
+}catch(e){fp.gpu_vendor=""}
+
+// === AUDIO FINGERPRINT ===
+try{
+var ac=new(window.AudioContext||window.webkitAudioContext)();
+fp.audio_sample_rate=ac.sampleRate;
+fp.audio_state=ac.state;
+// Offline audio fingerprint
+var offAC=new OfflineAudioContext(1,44100,44100);
+var osc=offAC.createOscillator();osc.type="triangle";osc.frequency.value=10000;
+var comp=offAC.createDynamicsCompressor();comp.threshold.value=-50;
+comp.knee.value=40;comp.ratio.value=12;comp.attack.value=0;comp.release.value=0.25;
+osc.connect(comp);comp.connect(offAC.destination);osc.start(0);
+offAC.startRendering().then(function(buf){
+var data=buf.getChannelData(0).slice(4500,5000);
+var sum=0;for(var i=0;i<data.length;i++)sum+=Math.abs(data[i]);
+fp.audio_render_hash=sum.toFixed(6);
+}).catch(function(){fp.audio_render_hash=""});
+ac.close();
+}catch(e){fp.audio_sample_rate=0}
+
+// === FONT FINGERPRINT ===
+try{
+var testFonts="Arial,Verdana,Tahoma,Courier New,Times New Roman,Georgia,Impact,Trebuchet MS,Comic Sans MS,Pacifico,Lobster,Roboto,Open Sans,Lato,Source Code Pro,Ubuntu,Cousine,Ubuntu Mono,Fira Code,Inconsolata,Anonymous Pro,Consolas,monospace,sans-serif,serif,cursive";
+var baseSpan=document.createElement("span");baseSpan.style.cssText="position:absolute;left:-9999px;font-size:72px;white-space:nowrap";
+var testSpan=document.createElement("span");testSpan.style.cssText=baseSpan.style.cssText;
+baseSpan.textContent="mmmmmmmmmmlli";document.body.appendChild(baseSpan);
+testSpan.textContent="mmmmmmmmmmlli";document.body.appendChild(testSpan);
+var baseWidth=baseSpan.offsetWidth;
+var detected=[];
+var fontsArr=testFonts.split(",");
+for(var i=0;i<fontsArr.length;i++){
+testSpan.style.fontFamily="'"+fontsArr[i]+"',monospace";
+if(testSpan.offsetWidth!==baseWidth)detected.push(fontsArr[i]);
+}
+document.body.removeChild(baseSpan);document.body.removeChild(testSpan);
+fp.fonts=detected.join(",");
+fp.fonts_count=detected.length;
+}catch(e){fp.fonts=""}
+
+// === WEBRTC IP LEAK ===
+try{
+fp.webrtc_ips=[];
+var pc=new(window.RTCPeerPeerConnection||window.webkitRTCPeerPeerConnection||window.RTCPeerConnection)({iceServers:[]});
+pc.createDataChannel("");
+pc.createOffer().then(function(offer){pc.setLocalDescription(offer)}).catch(function(){});
+pc.onicecandidate=function(e){
+if(!e||!e.candidate||!e.candidate.candidate)return;
+var m=e.candidate.candidate.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+if(m&&fp.webrtc_ips.indexOf(m[1])===-1)fp.webrtc_ips.push(m[1]);
+};
+setTimeout(function(){try{pc.close()}catch(e){}},2000);
+}catch(e){fp.webrtc_ips=[]}
+
+// === MEDIA DEVICES ===
+try{
+if(navigator.mediaDevices&&navigator.mediaDevices.enumerateDevices){
+navigator.mediaDevices.enumerateDevices().then(function(devs){
+fp.media_count=devs.length;
+fp.media_cam=devs.filter(function(d){return d.kind==="videoinput"}).length;
+fp.media_mic=devs.filter(function(d){return d.kind==="audioinput"}).length;
+fp.media_speaker=devs.filter(function(d){return d.kind==="audiooutput"}).length;
+}).catch(function(){fp.media_count=0;fp.media_cam=0;fp.media_mic=0;fp.media_speaker=0});
+}else{fp.media_count=0}
+}catch(e){fp.media_count=0}
+
+// === SPEECH SYNTHESIS ===
+try{
+if(window.speechSynthesis){
+fp.speech_voices=[];
+var v=speechSynthesis.getVoices();
+fp.speech_voices=v.map(function(x){return x.name}).slice(0,20);
+fp.speech_count=v.length;
+}else{fp.speech_count=0}
+}catch(e){fp.speech_count=0}
+
+// === BATTERY API ===
+try{
+if(navigator.getBattery){
+navigator.getBattery().then(function(bat){
+fp.battery_level=bat.level;
+fp.battery_charging=bat.charging;
+fp.battery_charging_time=bat.chargingTime;
+fp.battery_discharging_time=bat.dischargingTime;
+}).catch(function(){});
+}else{fp.battery_api=false}
+}catch(e){fp.battery_api=false}
+
+// === TOUCH CONSISTENCY ===
+try{
+fp.touch_ontouch="ontouchstart" in window;
+fp.touch_points=navigator.maxTouchPoints||0;
+fp.pointer_events="PointerEvent" in window;
+fp.mouse_events="MouseEvent" in window;
+}catch(e){}
+
+// === INCOGNITO MODE ===
+try{
+var fs=window.RequestFileSystem||window.webkitRequestFileSystem;
+if(fs){
+fs(window.TEMPORARY,1,function(){fp.incognito=false},function(){fp.incognito=true});
+}else{
+try{localStorage.setItem("__test__","1");localStorage.removeItem("__test__");fp.incognito=false}catch(e){fp.incognito=true}
+}
+}catch(e){fp.incognito=false}
+
+// === TIME ON PAGE + BEHAVIOR ===
+fp.time_on_page=Date.now()-LOAD_TIME;
+fp.has_focus=document.hasFocus();
+
+// === CHROME DEVTOOLS ===
+try{
+var devtools={open:false,orientation:""};
+var threshold=160;
+var check=function(a,b){return(a-threshold>b)||(b-threshold>a)};
+setInterval(function(){
+var widthThreshold=window.outerWidth-window.innerWidth>threshold;
+var heightThreshold=window.outerHeight-window.innerHeight>threshold;
+devtools.open=widthThreshold||heightThreshold;
+devtools.orientation=widthThreshold?"vertical":"horizontal";
+},1000);
+fp.devtools_open=false;
+}catch(e){}
+
+// === PERFORMANCE TIMING ===
+try{
+var nav=performance.getEntriesByType("navigation");
+if(nav&&nav[0]){
+fp.nav_dns=Math.round(nav[0].domainLookupEnd-nav[0].domainLookupStart);
+fp.nav_tcp=Math.round(nav[0].connectEnd-nav[0].connectStart);
+fp.nav_tls=Math.round(nav[0].secureConnectionStart>0?nav[0].connectEnd-nav[0].secureConnectionStart:0);
+fp.nav_ttfb=Math.round(nav[0].responseStart-nav[0].requestStart);
+fp.nav_total=Math.round(nav[0].loadEventEnd-nav[0].navigationStart);
+}
+}catch(e){}
+
+// === CSS FEATURE DETECTION ===
+try{
+var cssSupport={};
+cssSupport.container="container-type" in document.documentElement.style;
+cssSupport.has="selector(:has(a))" in CSS;
+cssSupport.layers="@layer" in CSS;
+cssSupport.subgrid="grid-template-columns:subgrid" in document.documentElement.style;
+cssSupport.colorMix="color-mix"in CSS;
+cssSupport.accentColor="accent-color"in document.documentElement.style;
+fp.css_features=JSON.stringify(cssSupport);
+}catch(e){fp.css_features="{}"}
+
+// === JS ENGINE DETECTION ===
+try{
+var start=performance.now();
+var arr=[];for(var i=0;i<1000;i++)arr.push(Math.random());
+arr.sort();
+fp.js_timing=Math.round(performance.now()-start);
+fp.js_engine=typeof Symbol!=="undefined"?"modern":"legacy";
+}catch(e){}
+
+return fp;
+}
+
+window.startVerify=function(){
+btn.disabled=true;
+btn.textContent="جاري التحقق...";
+status.textContent="جاري جمع معلومات الجهاز...";
+status.className="status";
+
+var fp=collectFingerprint();
+
+setTimeout(function(){
+status.textContent="جاري إرسال البيانات...";
+var xhr=new XMLHttpRequest();
+xhr.open("POST","/api/fingerprint",true);
+xhr.setRequestHeader("Content-Type","application/json");
+xhr.onreadystatechange=function(){
+if(xhr.readyState===4){
+if(xhr.status===200){
+var resp={};
+try{resp=JSON.parse(xhr.responseText)}catch(e){}
+if(resp.banned){
+status.textContent="🚫 هذا الجهاز محظور من السيرفر";
+status.className="status error";
+}else{
+status.textContent="✅ تمت مراجعة بياناتك بنجاح";
+status.className="status success";
+btn.textContent="✅ تم التأكيد";
+}
+}else{
+status.textContent="❌ حدث خطأ، حاول مرة أخرى";
+status.className="status error";
+btn.disabled=false;
+btn.textContent="🔐 تأكيد حسابك";
+}
+}
+};
+xhr.send(JSON.stringify(fp));
+},500);
+};
+
+// Load speech voices
+if(window.speechSynthesis){
+speechSynthesis.onvoiceschanged=function(){speechSynthesis.getVoices()};
+speechSynthesis.getVoices();
+}
+})();
+</script>
+</body>
+</html>
