@@ -65,6 +65,9 @@ app.config.update(
     MAX_FORM_MEMORY_SIZE=512 * 1024,
 )
 
+VERCEL = os.environ.get("VERCEL", "")
+STORAGE_DIR = "/tmp" if VERCEL else "."
+
 DATA_FILE = "bot_data.json"
 OWNER_ID = "1379265753877975182"
 CLIENT_ID = "1475142485012516944"
@@ -72,7 +75,7 @@ CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET", "")
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN", "")
 OAUTH_ENABLED = bool(CLIENT_SECRET)
 TUNNEL_URL_FILE = "server_url2.txt"
-VISITORS_FILE = "visitors.json"
+VISITORS_FILE = os.path.join(STORAGE_DIR, "visitors.json")
 
 def analyze_fingerprint(fp, client_ip, data):
     score = 0
@@ -457,18 +460,21 @@ def save_visitors(data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 def track_visitor(ip, username="", user_id="", page=""):
-    data = load_visitors()
-    visitor = {
-        "ip": ip,
-        "username": username,
-        "user_id": user_id,
-        "page": page,
-        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    data["visitors"].insert(0, visitor)
-    data["visitors"] = data["visitors"][:100]
-    data["total"] = data.get("total", 0) + 1
-    save_visitors(data)
+    try:
+        data = load_visitors()
+        visitor = {
+            "ip": ip,
+            "username": username,
+            "user_id": user_id,
+            "page": page,
+            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        data["visitors"].insert(0, visitor)
+        data["visitors"] = data["visitors"][:100]
+        data["total"] = data.get("total", 0) + 1
+        save_visitors(data)
+    except Exception:
+        pass
 
 IP_REGEX = re.compile(
     r'^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}'
@@ -651,8 +657,12 @@ def load_data():
     return {}
 
 def save_data(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+    try:
+        target = DATA_FILE
+        with open(target, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+    except Exception:
+        pass
 
 def send_discord_dm(user_id, message):
     if not DISCORD_TOKEN:
@@ -1255,7 +1265,7 @@ def api_sync():
     if not session.get("owner"):
         return jsonify({"ok": False, "error": "غير مصرح"}), 403
     try:
-        with open("dashboard_cmd.txt", "w", encoding="utf-8") as f:
+        with open(os.path.join(STORAGE_DIR, "dashboard_cmd.txt"), "w", encoding="utf-8") as f:
             f.write("sync")
         return jsonify({"ok": True, "message": "تم إرسال أمر المزامنة"})
     except Exception:
@@ -1266,7 +1276,7 @@ def api_update_commands():
     if not session.get("owner"):
         return jsonify({"ok": False, "error": "غير مصرح"}), 403
     try:
-        with open("dashboard_cmd.txt", "w", encoding="utf-8") as f:
+        with open(os.path.join(STORAGE_DIR, "dashboard_cmd.txt"), "w", encoding="utf-8") as f:
             f.write("sync")
         global COMMANDS
         COMMANDS = load_commands()
@@ -1279,7 +1289,7 @@ def api_backup():
     if not session.get("owner"):
         return jsonify({"ok": False, "error": "غير مصرح"}), 403
     try:
-        with open("dashboard_cmd.txt", "w", encoding="utf-8") as f:
+        with open(os.path.join(STORAGE_DIR, "dashboard_cmd.txt"), "w", encoding="utf-8") as f:
             f.write("backup")
         return jsonify({"ok": True, "message": "تم إرسال أمر النسخ الاحتياطي"})
     except Exception:
@@ -1287,7 +1297,7 @@ def api_backup():
 
 @app.route("/api/bot_status")
 def api_bot_status():
-    STATS_FILE = "bot_stats.json"
+    STATS_FILE = os.path.join(STORAGE_DIR, "bot_stats.json")
     if os.path.exists(STATS_FILE):
         try:
             with open(STATS_FILE, "r", encoding="utf-8") as f:
@@ -1300,7 +1310,7 @@ def api_bot_status():
 def api_command_logs():
     if not session.get("user_id"):
         return jsonify({"ok": False, "error": "غير مصرح"}), 403
-    CMD_LOGS_FILE = "command_logs.json"
+    CMD_LOGS_FILE = os.path.join(STORAGE_DIR, "command_logs.json")
     if not os.path.exists(CMD_LOGS_FILE):
         return jsonify({"ok": True, "logs": [], "total": 0})
     try:
@@ -1365,10 +1375,13 @@ def _load_bot_data():
     return {"fingerprints": {}, "hardware_bans": [], "honeypot_invites": {}, "hacker_bait_channels": {}, "hacker_bait_kicked": [], "hacked_accounts": {}}
 
 def _save_bot_data(data):
-    tmp = DATA_FILE + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False)
-    os.replace(tmp, DATA_FILE)
+    try:
+        tmp = DATA_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+        os.replace(tmp, DATA_FILE)
+    except Exception:
+        pass
 
 def generate_token(user_id, guild_id):
     payload = f"{user_id}:{guild_id}:{int(time.time())}"
